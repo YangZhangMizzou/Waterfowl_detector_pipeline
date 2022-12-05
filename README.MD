@@ -1,4 +1,4 @@
-# Retinanet for Waterfowl detection inference example
+# Waterfowl detector pipeline instruction
 
 This code is an demo only on how to apply retinanet,yolov5 and FasterRCNN onto the Waterfowl dataset. In this demo, pretrained general models of three detectors are provided and can be downloaded here https://drive.google.com/file/d/1Rgbn9JvzJb1vVu_l-l2D0g5R0-Vj3EXt/view?usp=sharing . Download and extract its content to folder 'checkpoints'.
 
@@ -28,6 +28,8 @@ once env is created use, eg:
 ```
 conda activate torch_py3
 ```
+cd Waterfowl_detector_pipeline
+```
 
 ### Install pytorch
 
@@ -38,13 +40,28 @@ conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit
 ### Install dependency for FasterRCNN
 
 Install Detectron2 following the instructions on the website. https://detectron2.readthedocs.io/en/latest/index.html
-
+and then run the following command
 
 ```
-conda install pytorch torchvision torchaudio cpuonly -c pytorch
+pip install pandas
+pip install numpy
+pip install opencv-python
+pip install tqdm
+pip install efficientnet_pytorch
+pip install resnet_pytorch
+```
+
+### Install dependency for YOLOV5
+
+Just run this command and all set for YOLOV5
+```
+pip install -r requirements.txt
+```
+
+### Install dependency for Retinanet
+
 pip install opencv-contrib-python
 pip install Pillow==6.1
-pip install pandas
 pip install pyexiv2
 pip install matplotlib
 pip install -i https://test.pypi.org/simple/ WaterFowlTools
