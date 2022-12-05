@@ -37,7 +37,9 @@ conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit
 ```
 ### Install dependency for FasterRCNN
 
-once you have activated the env, make sure you are under the env you created and run the following commands:
+Install Detectron2 following the instructions on the website. https://detectron2.readthedocs.io/en/latest/index.html
+
+
 ```
 conda install pytorch torchvision torchaudio cpuonly -c pytorch
 pip install opencv-contrib-python
