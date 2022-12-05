@@ -56,6 +56,7 @@ pip install -r requirements.txt
 
 ### Install dependency for Retinanet
 
+```
 pip install opencv-contrib-python
 pip install Pillow==6.1
 pip install pyexiv2
