@@ -87,32 +87,28 @@ Once you have the input file ready and in correct virtual env, you can use the f
 quick example(full command):
 ```
 python inference_image_list.py \
---model_dir ./checkpoint/Bird_A/final_model.pkl \
---model_type Bird_A \
+--det_model retinanet \
 --image_root ./example_images/Bird_A \
 --image_ext jpg \
 --image_altitude 90 \
---use_altitude true \
+--use_altitude False \
 --image_date 2022-11-01 \
 --image_location University_of_Missouri \
---out_dir ./Result/Bird_A \
---evaluate true \
+--out_dir ./result/retinanet/Bird_A \
+--evaluate False \
 --visualize true 
 ```
 quick example(easy command):
 ```
 python inference_image_list.py \
---model_dir ./checkpoint/Bird_A/final_model.pkl \
---model_type Bird_A \
+--det_model retinanet \
 --image_root ./example_images/Bird_A \
---out_dir ./Result/Bird_A
+--out_dir ./result/retinanet/Bird_A
 ```
 
 The description of each command are as follows:
 ```
---model_dir: directory of the model, in this demo is where the checkpoint model locates
---model_type: we include some models that are specifically trained on different types of scenerio, in this demo for most cases, it will --simply match the model_dir type.
-
+--det_model: name of the detection model. you can select from yolo,faster and retinanet
 --image_root: specify where the iunput images stores
 --use_altitude: true/false variable, this specifies whether use the input altitude to scale the image during the inference. default is true.
 --image_ext: image extension of the target images, default is 'JPG'
