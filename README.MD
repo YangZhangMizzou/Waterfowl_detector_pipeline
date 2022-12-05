@@ -17,17 +17,13 @@ You can either use the cmd window to clone the repo using the following command
 ```
 git clone https://github.com/YangZhangMizzou/Waterfowl_detector_pipeline.git
 ```
-## Installation
 
 ### Create virtual environment
 Virtual env is recommended to be used in order to install the package, here Anaconda is recommended to be used, link to the Anaconda https://www.anaconda.com/, once you have installed the Anaconda , refer here to create you virtual env https://conda.io/projects/conda/en/latest/user-guide/getting-started.html. It is recommend to create the env along with python 3.8, demo cmd is here:
+
 ```
 conda create -n torch_py3 python==3.8
-```
-once env is created use, eg:
-```
 conda activate torch_py3
-```
 cd Waterfowl_detector_pipeline
 ```
 
