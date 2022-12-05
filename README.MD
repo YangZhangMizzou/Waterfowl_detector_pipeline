@@ -34,7 +34,7 @@ conda activate torch_py3
 We recommend to install pytorch with cuda to accelerate running speed.
 ```
 conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit=11.3 -c pytorch -c conda-forge
-
+```
 ### Install dependency for FasterRCNN
 
 once you have activated the env, make sure you are under the env you created and run the following commands:
