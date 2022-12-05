@@ -1,9 +1,6 @@
-# Retinanet for Waterfowl detection inference example
+# Waterfowl detector pipeline instruction
 
-This code is an demo only on how to apply retinanet onto the Waterfowl dataset. In this demo contains pretrained model named as Bird_A, Bird_B, Bird_C, Bird_D, Bird_E  avaialble under folder **checkpoint** please download and unzip the checkpoint folder content using link here https://drive.google.com/file/d/1ZXva0sP5h7JiaUmU4mWpb5yrjwr7B1ai/view?usp=sharing and place the downloaded file inside the checkpoint folder.
-
-## Branch usage:
-This is the EasyUse branch which provides most easy approach of using the system as research tools, if seeking for experiment/software testing, please switch to branch **master**
+This code is an demo only on how to apply retinanet,yolov5 and FasterRCNN onto the Waterfowl dataset. In this demo, pretrained general models of three detectors are provided and can be downloaded here https://drive.google.com/file/d/1Rgbn9JvzJb1vVu_l-l2D0g5R0-Vj3EXt/view?usp=sharing . Download and extract its content to folder 'checkpoints'.
 
 ## System requirements
 Support both Windows system and Linux system, can be used with/without cuda environement.
@@ -16,46 +13,52 @@ In this demo, some images are included for testing, under folder **example_image
 ## Installation
 
 ### Clone the repository
-You can either use the cmd window to clone the repo using the following command or you can refer to the link here:https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository
+You can either use the cmd window to clone the repo using the following command
 ```
-git clone https://github.com/RobertTzc/Retinanet_inference_example.git
+git clone https://github.com/YangZhangMizzou/Waterfowl_detector_pipeline.git
 ```
-We provided two different ways of installing the packages, through virtual env and direct installation
-### Virtual env
 
+### Create virtual environment
 Virtual env is recommended to be used in order to install the package, here Anaconda is recommended to be used, link to the Anaconda https://www.anaconda.com/, once you have installed the Anaconda , refer here to create you virtual env https://conda.io/projects/conda/en/latest/user-guide/getting-started.html. It is recommend to create the env along with python 3.8, demo cmd is here:
+
 ```
 conda create -n torch_py3 python==3.8
-```
-once env is created use, eg:
-```
 conda activate torch_py3
+cd Waterfowl_detector_pipeline
 ```
-once you have activated the env, make sure you are under the env you created and run the following commands:
+
+### Install pytorch
+
+We recommend to install pytorch with cuda to accelerate running speed.
 ```
-conda install pytorch torchvision torchaudio cpuonly -c pytorch
-pip install opencv-contrib-python
-pip install Pillow==6.1
-pip install pandas
-pip install pyexiv2
-pip install matplotlib
-pip install -i https://test.pypi.org/simple/ WaterFowlTools
-pip install packaging
-pip install kiwisolver
-pip install cycler
+conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit=11.3 -c pytorch -c conda-forge
 ```
-### Direct installation
-Packages can also be installed with direct pip :
+### Install dependency for FasterRCNN
+
+Install Detectron2 following the instructions on the website. https://detectron2.readthedocs.io/en/latest/index.html
+and then run the following command
 
 ```
-For windows:
-  pip3 install torch torchvision torchaudio
-For Linux:
-  pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
-The rest are identical on both systems:
+pip install pandas
+pip install numpy
+pip install opencv-python
+pip install tqdm
+pip install efficientnet_pytorch
+pip install resnet_pytorch
+```
+
+### Install dependency for YOLOV5
+
+Just run this command and all set for YOLOV5
+```
+pip install -r requirements.txt
+```
+
+### Install dependency for Retinanet
+
+```
 pip install opencv-contrib-python
 pip install Pillow==6.1
-pip install pandas
 pip install pyexiv2
 pip install matplotlib
 pip install -i https://test.pypi.org/simple/ WaterFowlTools
@@ -84,32 +87,28 @@ Once you have the input file ready and in correct virtual env, you can use the f
 quick example(full command):
 ```
 python inference_image_list.py \
---model_dir ./checkpoint/Bird_A/final_model.pkl \
---model_type Bird_A \
+--det_model retinanet \
 --image_root ./example_images/Bird_A \
 --image_ext jpg \
 --image_altitude 90 \
---use_altitude true \
+--use_altitude False \
 --image_date 2022-11-01 \
 --image_location University_of_Missouri \
---out_dir ./Result/Bird_A \
---evaluate true \
+--out_dir ./result/retinanet/Bird_A \
+--evaluate False \
 --visualize true 
 ```
 quick example(easy command):
 ```
 python inference_image_list.py \
---model_dir ./checkpoint/Bird_A/final_model.pkl \
---model_type Bird_A \
+--det_model retinanet \
 --image_root ./example_images/Bird_A \
---out_dir ./Result/Bird_A
+--out_dir ./result/retinanet/Bird_A
 ```
 
 The description of each command are as follows:
 ```
---model_dir: directory of the model, in this demo is where the checkpoint model locates
---model_type: we include some models that are specifically trained on different types of scenerio, in this demo for most cases, it will --simply match the model_dir type.
-
+--det_model: name of the detection model. you can select from yolo,faster and retinanet
 --image_root: specify where the iunput images stores
 --use_altitude: true/false variable, this specifies whether use the input altitude to scale the image during the inference. default is true.
 --image_ext: image extension of the target images, default is 'JPG'

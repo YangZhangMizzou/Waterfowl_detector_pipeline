@@ -1,0 +1,14 @@
+{
+    "model_dir": "",
+    "det_model": "faster",
+    "cla_model": "resnet",
+    "image_root": "./example_images/Bird_A",
+    "image_ext": "JPG",
+    "image_altitude": 90,
+    "image_location": "No_Where",
+    "image_date": "2022-10-26",
+    "use_altitude": true,
+    "out_dir": "./Result/faster/Bird_A",
+    "visualize": true,
+    "evaluate": false
+}
