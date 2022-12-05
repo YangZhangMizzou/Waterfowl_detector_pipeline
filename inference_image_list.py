@@ -67,6 +67,7 @@ def get_model_extension(model_dir,defaultaltitude):
 def get_detectron_predictor(model_dir):
     cfg = get_cfg()
     cfg.merge_from_file('./configs/COCO-Detection/faster_rcnn_R_50_FPN_1x.yaml')
+    cfg.MODEL.DEVICE = device
     cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8], [16], [32],[64],[128]]
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon)
     cfg.MODEL.WEIGHTS = model_dir
@@ -157,7 +158,6 @@ def inference_mega_image_Retinanet(image_list, model_dir, image_out_dir,text_out
 def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir, visualize , scaleByAltitude=False, defaultAltitude=[],**kwargs):
     record = []
     device = select_device('')
-    print(device)
     model = DetectMultiBackend(model_dir, device=device, dnn=False, data='./configs/BirdA_all.yaml', fp16=False)
     stride, names, pt = model.stride, model.names, model.pt
 
@@ -230,7 +230,6 @@ def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir,
 def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_dir, visualize , scaleByAltitude=False, defaultAltitude=[],**kwargs):
     
     record = []
-    device = select_device('')
     predictor = get_detectron_predictor(model_dir = model_dir)
 
     mega_imgae_id = 0
