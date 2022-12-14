@@ -7,19 +7,20 @@ from encoder import DataEncoder
 import os
 import warnings
 import glob
-import os
-import numpy as np
 import numpy as np
 import time
 import json
 import sys
-import glob
 import pandas as pd
 from args import *
 from tools import py_cpu_nms,get_sub_image
 import matplotlib.pyplot as plt
-
 from tqdm import tqdm
+from mAP_cal import mAp_calculate,plot_f1_score,plot_mAp
+import shutil
+from get_f1 import compare
+
+
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
 from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
@@ -30,9 +31,17 @@ from utils.torch_utils import select_device, smart_inference_mode, time_sync
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 
-# from detectron2.data.datasets import register_coco_instances
-# from detectron2.data import build_detection_test_loader, build_detection_train_loader, MetadataCatalog
-# from detectron2.utils.visualizer import Visualizer
+from efficientnet_pytorch import EfficientNet
+from resnet_pytorch import ResNet
+import torch.nn.functional as F
+import torch.nn as nn
+from torch.utils.data import DataLoader, Dataset
+import torchvision.datasets as datasets
+import torchvision.models as models
+from torchvision import transforms
+import collections
+from absl import app, flags
+
 
 # from utils_retina import read_LatLotAlt,get_GSD
 # from WaterFowlTools.mAp import mAp_calculate,plot_f1_score,plot_mAp
@@ -48,7 +57,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model_conf_threshold = {'Bird_A':0.2,'Bird_B':0.2,'Bird_C':0.2,'Bird_D':0.2,'Bird_E':0.2,'Bird_drone':0.2}
 model_extension = {'Bird_drone':{40:('_alt_30',30),90:('_alt_90',90)}}
 
-print(torch.cuda.is_available())
 
 def get_model_conf_threshold ():
     return 0.2
@@ -62,19 +70,18 @@ def get_model_extension(model_dir,defaultaltitude):
     #     model_dir = model_dir.replace('.pth',model_extension[max(model_extension.keys())][0]+'.pth')
     #     return model_dir,model_extension[max(model_extension.keys())][1]
     # else:
-        return model_dir,90
+    return model_dir,90
 
 def get_detectron_predictor(model_dir):
     cfg = get_cfg()
     cfg.merge_from_file('./configs/COCO-Detection/faster_rcnn_R_50_FPN_1x.yaml')
-    cfg.MODEL.DEVICE = device
+    cfg.MODEL.DEVICE = 'cuda'
     cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8], [16], [32],[64],[128]]
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon)
     cfg.MODEL.WEIGHTS = model_dir
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.3   # set the testing threshold for this model
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5   # set the testing threshold for this model
     predictor = DefaultPredictor(cfg)
     return predictor
-
 
 def inference_mega_image_Retinanet(image_list, model_dir, image_out_dir,text_out_dir, visualize,scaleByAltitude=True, defaultAltitude=[],**kwargs):
     conf_thresh = get_model_conf_threshold()
@@ -288,11 +295,96 @@ def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_di
     record = pd.DataFrame(record)
     record.to_csv(kwargs['csv_out_dir'],header = ['image_name','date','location','altitude','latitude_meta','longitude_meta','altitude_meta','num_birds','time_spent(sec)'],index = True)
 
+def prepare_classifier(model_name,num_of_classes):
+
+    if model_name == 'resnet':
+        model = ResNet.from_pretrained('resnet18')
+        num_ftrs = model.fc.in_features
+        model.fc = nn.Linear(num_ftrs, num_of_classes)
+        savedweight = './checkpoint/classifier/resnet18-sklearn-sf-vr-last.pt'
+    if  model_name == 'resnext':
+        model = models.resnext50_32x4d(pretrained=True)
+        num_ftrs = model.fc.in_features
+        model.fc = nn.Linear(num_ftrs, num_of_classes)
+        savedweight = './checkpoint/classifier/resnext50-sklearn-last.pt'
+    if  model_name == 'efficientnet':
+        model = ResNet.from_pretrained('efficientnet-b3')
+        num_ftrs = model._fc.in_features
+        model._fc = nn.Linear(num_ftrs, num_of_classes)
+
+    checkpoint = torch.load(savedweight)
+    model.load_state_dict(checkpoint)
+    model.eval()
+    model = model.to('cuda')
+    return model
+
+def crop_bird_from_image(image_data,bbox):
+    height, width, channels = image_data.shape
+    return image_data[max(bbox[1],0):min(bbox[3],height),max(bbox[0],0):min(bbox[2],width)]
+
+def build_dataloader(testdir):
+         
+    pretrained_size  = (128,128)
+    pretrained_means = [0.485, 0.456, 0.406]
+    pretrained_stds  = [0.229, 0.224, 0.225]
+
+    test_transforms = transforms.Compose([
+                transforms.Resize(pretrained_size),
+                transforms.CenterCrop(pretrained_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean = pretrained_means, std = pretrained_stds)
+            ])
+
+    test_iterator = torch.utils.data.DataLoader(
+         datasets.ImageFolder(testdir, test_transforms),
+         batch_size=1)
+    return test_iterator
+
+ss=['Ring-necked_duck_Male', 'American_Widgeon_Female', 'Ring-necked_duck_Female', 'Canvasback_Male', 'Canvasback_Female', 
+'Scaup_Male', 'Shoveler_Male', 'Not_a_bird', 'Shoveler_Female', 'Gadwall', 'Unknown', 'Mallard_Male', 'Pintail_Male', 
+'Green-winged_teal', 'White-fronted_Goose', 'Snow/Ross_Goose_(blue)', 'Snow/Ross_Goose', 'Mallard_Female', 'Coot', 'Pelican', 
+'American_Widgeon_Male', 'Canada_Goose']
+
+def predict_classes(images_root,bbox_dir,select_model):
+    num_of_classes = 22
+    txt_files = glob.glob(bbox_dir+'/*.txt')
+    model = prepare_classifier(select_model,num_of_classes)
+    for txt_dir in txt_files:
+        txt_name = txt_dir.split('/')[-1].split('.')[0]
+        image_dir = images_root +'/'+ txt_name + '.{}'.format(args.image_ext)
+        if not os.path.exists(bbox_dir+'/tmp'):
+            os.makedirs(bbox_dir+'/tmp')
+            tmp_image_dir = bbox_dir+'/tmp/unknown'
+            os.makedirs(tmp_image_dir)
+            with open(txt_dir, "r") as f:
+                lines = f.readlines()
+                if lines != []:
+                    index = 1
+                    image_data = cv2.imread(image_dir)
+                    for line in lines:
+                        confidence = float(line.split(' ')[-5])
+                        bbox = [int(line.split(' ')[-4]),int(line.split(' ')[-3]),int(line.split(' ')[-2]),int(line.split(' ')[-1])] #x1y1x2y2
+                        bird_crop = crop_bird_from_image(image_data,bbox)
+                        cv2.imwrite(tmp_image_dir+'/{}.JPG'.format(index),bird_crop)
+                        index += 1
+                    test_iterator = build_dataloader(bbox_dir+'/tmp')
+                    y_preds=[]
+                    with torch.no_grad():
+                        for (x, y) in tqdm(test_iterator):
+                            x = x.to('cuda')
+                            y_pred = model(x)
+                            output = (torch.max(torch.exp(y_pred), 1)[1]).data.cpu().numpy()
+                            y_preds.extend(output)
+                    preds=[ss[i] for i in y_preds]
+                    with open(txt_dir, "w") as f:
+                        for j in range(len(lines)):
+                            f.write(lines[j].replace('bird',preds[j]))
+            shutil.rmtree(bbox_dir+'/tmp/')
+
 if __name__ == '__main__':
     args = get_args()
     image_list = glob.glob(os.path.join(args.image_root,'*.{}'.format(args.image_ext)))
     image_name_list = [os.path.basename(i) for i in image_list]
-    print (image_list)
 
     altitude_list = [args.image_altitude for _ in image_list]
     
@@ -300,7 +392,6 @@ if __name__ == '__main__':
     date_list = [args.image_date for _ in image_list]
     
     target_dir = args.out_dir
-    # model_dir = args.model_dir
     image_out_dir = os.path.join(target_dir,'visualize-results')
     text_out_dir = os.path.join(target_dir,'detection-results')
     csv_out_dir = os.path.join(target_dir,'detection_summary.csv')
@@ -318,40 +409,48 @@ if __name__ == '__main__':
 
     if(args.det_model == 'retinanet'):
         model_dir = './checkpoint/retinanet/general/final_model_alt_60.pkl'
+        if args.model_dir != '':
+            model_dir = args.model_dir
         inference_mega_image_Retinanet(
         image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
         scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
         visualize = args.visualize,device = device)
     if(args.det_model == 'yolo'):
         model_dir = './checkpoint/yolo/general/model.pt'
+        if args.model_dir != '':
+            model_dir = args.model_dir
         inference_mega_image_YOLO(
         image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
         scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
         visualize = args.visualize,device = device)
     if(args.det_model == 'faster'):
-        model_dir = './checkpoint/faster/general/model.pth'
+        model_dir = './checkpoint/faster/Fasterrcnn-Bird/model_final.pth'
+        if args.model_dir != '':
+            model_dir = args.model_dir
         inference_mega_image_faster(
         image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
         scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
         visualize = args.visualize,device = device)
-  
+
+    if (args.cla_model != ''):
+        print('predicting classes...')
+        predict_classes(args.image_root,text_out_dir,args.cla_model)
     if (args.evaluate):
-        try:
-            precision, recall, sum_AP, mrec, mprec, area = mAp_calculate(image_name_list = image_name_list, 
-                                                                        gt_txt_list=[os.path.splitext(i)[0]+'.txt' for i in image_list],
-                                                                        pred_txt_list = [text_out_dir+'/'+os.path.splitext(i)[0]+'.txt' for i in image_name_list],
-                                                                        iou_thresh=0.3)
-            plot_f1_score(precision, recall, args.model_type, text_out_dir, area, 'f1_score', color='r')
-            plt.legend()
-            plt.savefig(os.path.join(target_dir,'f1_score.jpg'))
-            plt.figure()
-            plot_mAp(precision, recall, mprec, mrec,  args.model_type, area, 'mAp', color='r')
-            plt.legend()
-            plt.savefig(os.path.join(target_dir,'mAp.jpg'))
-            print('Evaluation completed, proceed to wrap result')
-        except:
-            print('Failed to evaluate, Skipped')
+        precision, recall, sum_AP, mrec, mprec, area = mAp_calculate(image_name_list = image_name_list, 
+                                                                    gt_txt_list=[os.path.splitext(i)[0]+'.txt' for i in image_list],
+                                                                    pred_txt_list = [text_out_dir+'/'+os.path.splitext(i)[0]+'.txt' for i in image_name_list],
+                                                                    iou_thresh=0.3, 
+                                                                    )
+        plot_f1_score(precision, recall, 'general', text_out_dir, area, 'f1_score', color='r')
+        plt.legend()
+        plt.savefig(os.path.join(target_dir,'f1_score.jpg'))
+        plt.figure()
+        plot_mAp(precision, recall, mprec, mrec,  'general', area, 'mAp', color='r')
+        plt.legend()
+        plt.savefig(os.path.join(target_dir,'mAp.jpg'))
+        print('Evaluation completed, proceed to wrap result')
+
+
     argparse_dict = vars(args)
     with open(os.path.join(target_dir,'configs.json'),'w') as f:
         json.dump(argparse_dict,f,indent=4)
-    

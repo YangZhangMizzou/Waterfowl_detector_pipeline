@@ -72,7 +72,6 @@ class Classifier:
      def test_evalaute(self, savedweight):
          
          number_class=22
-         #Robert_number_class=28
          
          pretrained_size  = (128,128)
          pretrained_means = [0.485, 0.456, 0.406]
@@ -80,8 +79,7 @@ class Classifier:
              
          
          ss=['Ring-necked duck Male', 'American Widgeon_Female', 'Ring-necked duck Female', 'Canvasback_Male', 
-             'Canvasback_Female', 'Scaup_Male', 
-             'Shoveler_Male', 'Not a bird', 'Shoveler_Female', 'Gadwall', 'Unknown', 'Mallard Male', 'Pintail_Male', 'Green-winged teal', 
+             'Canvasback_Female', 'Scaup_Male', 'Shoveler_Male', 'Not a bird', 'Shoveler_Female', 'Gadwall', 'Unknown', 'Mallard Male', 'Pintail_Male', 'Green-winged teal', 
              'White-fronted Goose', 'Snow/Ross Goose (blue)', 'Snow/Ross Goose', 'Mallard Female', 'Coot', 'Pelican', 'American Widgeon_Male', 
              'Canada Goose']
          
@@ -99,8 +97,6 @@ class Classifier:
                  batch_size=self.batch)
          
          model_list=['resnet18', 'resnet50', 'efficientnet-b3', 'efficientnet-b5']
-         
-         
          
          if self.classfier == '1'  or self.classfier == '2':
              model = ResNet.from_pretrained(model_list[self.classfier-1])
@@ -128,7 +124,6 @@ class Classifier:
              for (x, y) in tqdm(test_iterator):
                  x = x.to('cuda')
                  y_pred = model(x)
-                 
                  output = (torch.max(torch.exp(y_pred), 1)[1]).data.cpu().numpy()
                  y_preds.extend(output)
                  

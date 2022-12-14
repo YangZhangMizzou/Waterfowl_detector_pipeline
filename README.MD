@@ -106,6 +106,14 @@ python inference_image_list.py \
 --out_dir ./result/retinanet/Bird_A
 ```
 
+run yolo only:
+```
+python inference_image_yolo.py\
+ --det_model yolo\
+ --image_root ./example_images/drone_collection\
+ --out_dir ./Result/yolo/drone_collection\
+```
+
 The description of each command are as follows:
 ```
 --det_model: name of the detection model. you can select from yolo,faster and retinanet

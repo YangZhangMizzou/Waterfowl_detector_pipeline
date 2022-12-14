@@ -12,7 +12,7 @@ def get_args():
                         default='retinanet')
     parser.add_argument('--cla_model', type = str,
                         help ='you can select from resnet,resnext and efficientnet',
-                        default='resnet')
+                        default='')
     parser.add_argument('--image_root',type = str,
                         help = 'The root dir where image are stores')
     parser.add_argument('--image_ext',type = str, default = 'JPG',
@@ -30,7 +30,7 @@ def get_args():
                         default = './results')
     parser.add_argument('--visualize',type = bool,
                         help = 'whether to have visualization stored to result, default is True',
-                        default = True)
+                        default = False)
     parser.add_argument('--evaluate',type = bool,
                         help = 'whether to evaluate the reslt,default is False',
                         default = False)
