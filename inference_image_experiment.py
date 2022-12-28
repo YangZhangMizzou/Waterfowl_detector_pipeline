@@ -19,6 +19,7 @@ from tqdm import tqdm
 from mAP_cal import mAp_calculate,plot_f1_score,plot_mAp
 import shutil
 from get_f1 import compare
+import compare
 
 
 from models.common import DetectMultiBackend
@@ -85,12 +86,11 @@ def read_csv_info(csv_dir):
     image_list = []
     for line in df.values.tolist():
         altitude_dict[line[1]] = int(line[3])
-        if line[4] == 'test':
+        if line[4] == 'test' and abs(int(line[3])-15)<6:
             image_list.append(args.image_root+'/{}'.format(line[1]))
     return altitude_dict,image_list 
 
 def inference_mega_image_Retinanet(image_list, model_root_dir, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude=True, defaultAltitude=[],**kwargs):
-    prepare_retinanet(model_dir)
     for idxs, image_dir in (enumerate(image_list)):
         conf_thresh = get_model_conf_threshold()
         model_dir,ref_altitude,image_altitude = get_model_extension(altitude_dict,image_dir,model_root_dir=model_root_dir,defaultaltitude=defaultAltitude[0])
@@ -417,9 +417,6 @@ if __name__ == '__main__':
         model_dir = './checkpoint/retinanet/general'
         if args.model_dir != '':
             model_dir = args.model_dir
-
-        
-
         inference_mega_image_Retinanet(
         image_list=image_list, model_root_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
         scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list ,altitude_dict = altitude_dict, date_list = date_list,location_list =location_list,
@@ -458,6 +455,7 @@ if __name__ == '__main__':
         plt.legend()
         plt.savefig(os.path.join(target_dir,'mAp.jpg'))
         print('Evaluation completed, proceed to wrap result')
+
 
 
     argparse_dict = vars(args)

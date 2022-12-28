@@ -145,7 +145,7 @@ def mAp_calculate(image_name_list, gt_txt_list, pred_txt_list, iou_thresh):
         pred_bbox = []
         for line in pred_data:
              pred_bbox.append([float(i)
-                         for i in line.replace('\n', '').split(' ')[1:]])
+                         for i in line.replace('\n', '').split(',')[1:]])
         pred_bbox.sort(reverse=True)
         pred_dict[pred_name] = pred_bbox
         total_pred_box += len(pred_bbox)
@@ -205,7 +205,7 @@ def plot_f1_score(precision, recall, dataset_name, pred_dir, area, label, color)
             pred_data = f.readlines()
         for line in pred_data:
             pred_bbox.append([float(i)
-                         for i in line.replace('\n', '').split(' ')[1:]])
+                         for i in line.replace('\n', '').split(',')[1:]])
     pred_bbox.sort(reverse=True)
     score = [i[0] for i in pred_bbox]
     conf_thresh = pred_bbox[f1_list.index(max(f1_list))][0]
