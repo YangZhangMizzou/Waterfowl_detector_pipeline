@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import glob
 import cv2
+import statistics
 
 def IoU(true_box, pred_box):
 
@@ -23,7 +24,6 @@ def draw_image(image_dir,output_dir,tp_list,fp_list,fn_list,tp_cate_list,cate = 
 	raw_image = cv2.imread(image_dir)
 	for box in fn_list:
 		cv2.ellipse(raw_image, [int((box[0]+box[2])/2),int((box[1]+box[3])/2)], (int(box[2]-box[0]),int(box[3]-box[1])),0, 0, 360, (0,0,255), 3)
-		
 	for box in fp_list:
 		cv2.polylines(raw_image, np.array([[(int((box[0]+box[2])/2), box[1]), (box[0], box[3]), (box[2], box[3])]]), True, (0,0,255), 3)
 	for box in tp_list:
@@ -100,7 +100,7 @@ def read_box_from_pred_txt(txt_dir,thresh = 0.0):
 				bbox_list.append([int(part[-4]),int(part[-3]),int(part[-2]),int(part[-1]),part[0]])
 	return bbox_list
 
-def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',threshhold = 0.5,iou = 0.3):
+def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',threshhold = 0.5,iou = 0.3,if_cate = True):
 	predict_txt_list = sorted(glob.glob(prediction_dir+'/*.txt'))
 
 	false_pred = []
@@ -120,7 +120,7 @@ def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',thres
 		pred_list = read_box_from_pred_txt(predict_txt_list[index],threshhold)
 		image_dir = gt_txt.replace('.txt','.{}'.format(image_type))
 		tp,fp,fn,tp_cate,tp_list,fp_list,fn_list,tp_cate_list = calculate_precis_recall(gt_list,pred_list,iou)
-		draw_image(image_dir,prediction_dir.replace('detection-results','visualize-results'),tp_list,fp_list,fn_list,tp_cate_list)
+		draw_image(image_dir,prediction_dir.replace('detection-results','visualize-results'),tp_list,fp_list,fn_list,tp_cate_list,if_cate)
 
 		false_pred.append(fp)
 		true_pred.append(tp)
@@ -136,14 +136,15 @@ def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',thres
 			recall_this_image = round((1.0*tp)/(1.0*tp+1.0*fn),2)
 			f1_score_this_image = round(2*precision_this_image*recall_this_image/(precision_this_image+recall_this_image),2)
 		if tp+fn != 0:
-			count_error_this_image = round(abs((1.0*fp-1.0*fn))/(1.0*tp+1.0*fn),2)
-		record[index].extend([precision_this_image,recall_this_image,f1_score_this_image,len(gt_list),count_error_this_image])
+			count_error_this_image = round(abs((1.0*fp-1.0*fn)/(1.0*tp+1.0*fn)),2)
+		record[index].extend([tp+fp,tp+fn,tp,fp,fn,precision_this_image,recall_this_image,f1_score_this_image,count_error_this_image])
+		count_error_per_image.append(count_error_this_image)
 
 
 	precision = (1.0*np.sum(true_pred))/(1.0*np.sum(true_pred)+1.0*np.sum(false_pred)) 
 	recall = (1.0*np.sum(true_pred)/(1.0*(np.sum(true_pred)+np.sum(false_neg))))
 	f1_score = 2*precision*recall/(precision+recall)
-	count_error = abs(1.0*np.sum(false_pred)-1.0*np.sum(false_neg))/(1.0*np.sum(true_pred)+1.0*np.sum(false_neg)) 
+	count_error = statistics.median(count_error_per_image)
 	cate_precision = (1.0*np.sum(tp_cates))/(1.0*np.sum(true_pred)+1.0*np.sum(false_pred)) 
 	cate_recall = (1.0*np.sum(tp_cates)/(1.0*(np.sum(true_pred)+np.sum(false_neg))))
 	cate_f1_score = 2*cate_precision*cate_recall/(cate_precision+cate_recall)

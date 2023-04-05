@@ -53,24 +53,57 @@ transform = transforms.Compose([
     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 ])
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model_conf_threshold = {'Bird_A':0.2,'Bird_B':0.2,'Bird_C':0.2,'Bird_D':0.2,'Bird_E':0.2,'Bird_drone':0.2}
-model_extension = {'Bird_drone':{40:('_alt_30',30),90:('_alt_90',90)}}
 
 
 
 def get_model_conf_threshold ():
     return args.det_conf
 
-def get_model_extension(model_dir,defaultaltitude):
-    # if(model_type in model_extension):
-    #     for altitude_thresh in model_extension:
-    #         if (altitude_thresh>=defaultaltitude):
-    #             model_dir = model_dir.replace('.pth',model_extension[altitude_thresh][0]+'.pth')
-    #             return model_dir,model_extension[altitude_thresh][1]
-    #     model_dir = model_dir.replace('.pth',model_extension[max(model_extension.keys())][0]+'.pth')
-    #     return model_dir,model_extension[max(model_extension.keys())][1]
-    # else:
-    return model_dir,90
+def read_csv_info(csv_dir):
+    df = pd.read_csv(csv_dir)
+    altitude_dict = {}
+    for line in df.values.tolist():
+        altitude_dict[line[1].split('.')[0]] = int(line[-2])
+    return altitude_dict
+
+
+def get_image_height_model_3(image_name,altitude_dict):
+    image_height = altitude_dict[image_name]
+    if image_height<=30:
+        return image_height,0,30
+    elif image_height<=60:
+        return image_height,1,60
+    else:
+        return image_height,2,90
+
+def get_image_height_model_4(image_name,altitude_dict):
+    image_height = altitude_dict[image_name]
+    if  image_height<=15:
+        return image_height,0,15
+    elif image_height<=30:
+        return image_height,1,30
+    elif image_height<=60:
+        return image_height,2,60
+    else:
+        return image_height,3,90
+
+def prepare_retina_net(model_dir,kwargs):
+    if (kwargs['device']!=torch.device('cuda')):
+        print ('loading CPU mode')
+        device = torch.device('cpu')
+        net = torch.load(model_dir,map_location=device)
+        net = net.module.to(device)
+    else:
+        device = torch.device('cuda')
+        net = torch.load(model_dir)
+        net.to(kwargs['device'])
+        print('check net model_type',next(net.parameters()).device)
+    return net
+
+def prepare_yolo_net(model_dir):
+    device = select_device('')
+    model = DetectMultiBackend(model_dir, device=device, dnn=False, data='./configs/BirdA_all.yaml', fp16=False)
+    return model
 
 def get_detectron_predictor(model_dir):
     cfg = get_cfg()
@@ -83,42 +116,42 @@ def get_detectron_predictor(model_dir):
     predictor = DefaultPredictor(cfg)
     return predictor
 
-def inference_mega_image_Retinanet(image_list, model_dir, image_out_dir,text_out_dir, visualize,scaleByAltitude=True, defaultAltitude=[],**kwargs):
+def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude=True,  defaultAltitude=[],**kwargs):
     conf_thresh = get_model_conf_threshold()
-    model_dir,ref_altitude = get_model_extension(model_dir=model_dir,defaultaltitude=defaultAltitude[0])
-    if (kwargs['device']!=torch.device('cuda')):
-        print ('loading CPU mode')
-        device = torch.device('cpu')
-        net = torch.load(model_dir,map_location=device)
-        net = net.module.to(device)
-    else:
-        device = torch.device('cuda')
-        net = torch.load(model_dir)
-    net.to(kwargs['device'])
-    print('check net mode',next(net.parameters()).device)
-    encoder = DataEncoder(device)
+    # model_dir,ref_altitude = get_model_extension(model_dir=model_dir,defaultaltitude=defaultAltitude[0])
+    model_30 = model_root+'/final_model_alt_30.pkl'
+    model_60 = model_root+'/final_model_alt_60.pkl'
+    model_90 = model_root+'/final_model_alt_90.pkl'
+    model_list = [model_30,model_60,model_90]
+
+    net_list = []
+    for height_model_dir in model_list:
+        net_list.append(prepare_retina_net(height_model_dir,kwargs))
+
     record_list = []
     for idxs, image_dir in (enumerate(image_list)):
+        
         start_time = time.time()
         altitude = int(defaultAltitude[idxs])
-        print ('Using default altitude for: {} with Altitude of {}'.format(os.path.basename(image_dir),altitude))
+        image_name = image_dir.split('/')[-1]
+
+        image_taken_height,model_index,model_height = 60,1,60
+        ratio = 1.0
+        net = net_list[1]
         if scaleByAltitude:
-            # GSD,ref_GSD = get_GSD(altitude,camera_type='Pro2', ref_altitude=ref_altitude) # Mavic2 Pro GSD equations
-            # ratio = 1.0*ref_GSD/GSD
-            # ratio = 1.0
-            ratio = 1.0
-        else:
-            ratio = 1.0
+            image_taken_height,model_index,model_height = get_image_height_model_3(image_name.split('.')[0],altitude_dict)
+            ratio = round(model_height/image_taken_height, 2)
+            net = net_list[model_index]
+        encoder = DataEncoder(device)
+        print ('Using {}m model to detect {}m (Altitude) image'.format(model_height,image_taken_height))
         print('Processing scale {}'.format(ratio))
         bbox_list = []
         mega_image = cv2.imread(image_dir)
         mega_image = cv2.cvtColor(mega_image, cv2.COLOR_BGR2RGB)
-        sub_image_list, coor_list = get_sub_image(
-            mega_image, overlap=0.2, ratio=ratio)
+        sub_image_list, coor_list = get_sub_image(mega_image, overlap=0.2, ratio=ratio)
         for index, sub_image in enumerate(sub_image_list):
             with torch.no_grad():
-                inputs = transform(cv2.resize(
-                    sub_image, (512, 512), interpolation=cv2.INTER_AREA))
+                inputs = transform(cv2.resize(sub_image, (512, 512), interpolation=cv2.INTER_AREA))
                 inputs = inputs.unsqueeze(0).to(kwargs['device'])
                 loc_preds, cls_preds = net(inputs)
                 boxes, labels, scores = encoder.decode(
@@ -137,8 +170,7 @@ def inference_mega_image_Retinanet(image_list, model_dir, image_out_dir,text_out
                 box_idx = py_cpu_nms(bbox_list, 0.25)
                 # num_bird = len(box_idx)
                 selected_bbox = bbox_list[box_idx]
-                print('Finished on {},\tfound {} birds'.format(
-                os.path.basename(image_dir), len(selected_bbox)))
+                print('Finished on {}.'.format(os.path.basename(image_dir)))
                 selected_bbox = sorted(selected_bbox,key = lambda x: x[4],reverse = True)
                 for box in selected_bbox:
                     f.writelines('bird,{},{},{},{},{}\n'.format(
@@ -161,12 +193,19 @@ def inference_mega_image_Retinanet(image_list, model_dir, image_out_dir,text_out
                        defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
-def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir, visualize , scaleByAltitude=False, defaultAltitude=[],**kwargs):
+def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False,  defaultAltitude=[],**kwargs):
     record_list = []
-    device = select_device('')
-    model = DetectMultiBackend(model_dir, device=device, dnn=False, data='./configs/BirdA_all.yaml', fp16=False)
-    stride, names, pt = model.stride, model.names, model.pt
 
+    model_15_dir = model_root+'/15.pt'
+    model_30_dir  = model_root+'/30.pt'
+    model_60_dir  = model_root+'/60.pt'
+    model_90_dir  = model_root+'/90.pt'
+    model_15 = prepare_yolo_net(model_15_dir)
+    model_30 = prepare_yolo_net(model_30_dir)
+    model_60 = prepare_yolo_net(model_60_dir)
+    model_90 = prepare_yolo_net(model_90_dir)
+    model_list = [model_15,model_30,model_60,model_90]
+    
     mega_imgae_id = 0
     bbox_id = 1
     all_annotations= []
@@ -178,9 +217,16 @@ def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir,
             bbox_list = []
             mega_imgae_id += 1
             mega_image  = cv2.imread(image_dir)
+
+            image_name = image_dir.split('/')[-1]
+            image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
+            # ratio = round(model_height/image_height, 2)
             ratio = 1.0
-            sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.1,ratio = ratio)
+            model = model_list[model_index]
+
+            sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.2,ratio = ratio)
             for index,sub_image in enumerate(sub_image_list):
+                sub_image = cv2.resize(sub_image, dsize=(512, 512), interpolation=cv2.INTER_CUBIC)
                 im = np.expand_dims(sub_image, axis=0)
                 im = np.transpose(im,(0,3,1,2))
                 im = torch.from_numpy(im).to(device)
@@ -208,8 +254,8 @@ def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir,
                     box_idx = py_cpu_nms(bbox_list, 0.25)
                     # num_bird = len(box_idx)
                     selected_bbox = bbox_list[box_idx]
-                    print('Finished on {},\tfound {} birds'.format(
-                    os.path.basename(image_dir), len(selected_bbox)))
+                    # print('Finished on {},\tfound {} birds'.format(
+                    # os.path.basename(image_dir), len(selected_bbox)))
                     selected_bbox = sorted(selected_bbox,key = lambda x: x[4],reverse = True)
                     for box in selected_bbox:
                         f.writelines('bird,{},{},{},{},{}\n'.format(
@@ -231,15 +277,28 @@ def inference_mega_image_YOLO(image_list, model_dir, image_out_dir,text_out_dir,
                            defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
-def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_dir, visualize , scaleByAltitude=False, defaultAltitude=[],**kwargs):
+def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False, defaultAltitude=[],**kwargs):
     
     record_list = []
-    predictor = get_detectron_predictor(model_dir = model_dir)
+
+    model_15_dir = model_root+'/Bird_GIJ_15m/model_final.pth'
+    model_30_dir  = model_root+'/Bird_GIJ_30m/model_final.pth'
+    model_60_dir  = model_root+'/Bird_GIJ_60m/model_final.pth'
+    model_90_dir  = model_root+'/Bird_GIJ_90m/model_final.pth'
+    model_15 = get_detectron_predictor(model_15_dir)
+    model_30 = get_detectron_predictor(model_30_dir)
+    model_60 = get_detectron_predictor(model_60_dir)
+    model_90 = get_detectron_predictor(model_90_dir)
+    model_list = [model_15,model_30,model_60,model_90]
+
+    # predictor = get_detectron_predictor(model_dir = model_dir)
 
     mega_imgae_id = 0
     bbox_id = 1
     all_annotations= []
+
     with tqdm(total = len(image_list)) as pbar:
+
         for idxs,image_dir in (enumerate(image_list)):
             pbar.update(1)
             start_time = time.time()
@@ -247,7 +306,12 @@ def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_di
             mega_imgae_id += 1
             mega_image  = cv2.imread(image_dir)
             ratio =  1
-            sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.1,ratio = 1)
+            sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.2,ratio = 1)
+
+            image_name = image_dir.split('/')[-1]
+            image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
+            ratio = 1.0
+            predictor = model_list[model_index]
 
             for index,sub_image in enumerate(sub_image_list):
                 inputs = cv2.resize(sub_image,(512,512),interpolation = cv2.INTER_AREA)
@@ -267,8 +331,8 @@ def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_di
                     box_idx = py_cpu_nms(bbox_list, 0.25)
                     # num_bird = len(box_idx)
                     selected_bbox = bbox_list[box_idx]
-                    print('Finished on {},\tfound {} birds'.format(
-                    os.path.basename(image_dir), len(selected_bbox)))
+                    # print('Finished on {},\tfound {} birds'.format(
+                    # os.path.basename(image_dir), len(selected_bbox)))
                     selected_bbox = sorted(selected_bbox,key = lambda x: x[4],reverse = True)
                     for box in selected_bbox:
                         f.writelines('bird,{},{},{},{},{}\n'.format(
@@ -287,8 +351,7 @@ def inference_mega_image_faster(image_list, model_dir, image_out_dir,text_out_di
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                           defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],
-                           round(time.time()-start_time,2)])
+                           defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def prepare_classifier(model_name,num_of_classes):
@@ -398,35 +461,37 @@ if __name__ == '__main__':
     print ('Image out dir: {}'.format(image_out_dir))
     print ('Texting out dir: {}'.format(text_out_dir))
     print ('Inferencing on Images:\n {}'.format(image_list))
-    print ('Altitude of each image:\n {}'.format(altitude_list))
     print ('Visualize on each image:\n {}'.format(args.visualize))
     print ('*'*30)
     os.makedirs(image_out_dir, exist_ok=True)
     os.makedirs(text_out_dir, exist_ok=True)
     record = []
+
+    altitude_dict = read_csv_info('./example_images/image_info.csv')
+
     if(args.det_model == 'retinanet'):
-        model_dir = './checkpoint/retinanet/general/final_model_alt_30.pkl'
+        model_dir = './checkpoint/retinanet/general'
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_Retinanet(
-        image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
-        scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
+        image_list=image_list, model_root = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,  altitude_dict = altitude_dict,
+        scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list, 
         visualize = args.visualize,device = device)
     if(args.det_model == 'yolo'):
-        model_dir = './checkpoint/yolo/dr/best.pt'
+        model_dir = './checkpoint/yolo/height_varient'
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_YOLO(
-        image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
-        scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
+        image_list=image_list, model_root = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir, altitude_dict = altitude_dict,
+        scaleByAltitude=args.use_altitude,  defaultAltitude=altitude_list,date_list = date_list,location_list =location_list, 
         visualize = args.visualize,device = device)
     if(args.det_model == 'faster'):
-        model_dir = './checkpoint/faster/Fasterrcnn-Bird/model_final.pth'
+        model_dir = './checkpoint/faster/Model_Bird_GIJ_altitude_Zhenduo'
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_faster(
-        image_list=image_list, model_dir = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir,
-        scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list,
+        image_list=image_list, model_root = model_dir, image_out_dir = image_out_dir,text_out_dir = text_out_dir,csv_out_dir = csv_out_dir, altitude_dict = altitude_dict,
+        scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list, 
         visualize = args.visualize,device = device)
 
     if (args.cla_model != ''):
@@ -454,11 +519,12 @@ if __name__ == '__main__':
         conf_thresh_dict = {
             'yolo':0.3,
             'retinanet':0.5,
-            'faster':0.5
+            'faster':0.5,
         }
+
         conf_thresh = conf_thresh_dict[args.det_model]
 
-        record,precision,recall,f1_score,cate_precision,cate_recall,cate_f1_score,count_error = compare_draw(record,text_out_dir,args.image_root,args.image_ext,conf_thresh,0.3,if_cate)
+        record,precision,recall,f1_score,cate_precision,cate_recall,cate_f1_score,count_error = compare_draw(record,text_out_dir,args.image_root,args.image_ext,best_conf_thresh,0.3,if_cate)
         log = open(target_dir+'/overall_performance.txt','w')
         log.write('The overall performance on all images is')
         log.write('\nThe precision will be'+str(precision))

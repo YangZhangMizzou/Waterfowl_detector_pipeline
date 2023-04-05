@@ -215,6 +215,7 @@ def plot_f1_score(precision, recall, dataset_name, pred_dir, area, label, color)
     plt.xlim(1.0, 0)
     plt.xlabel('confidence threshold')
     plt.ylabel('F1_score')
+    return conf_thresh
 
 
 if __name__ == '__main__':

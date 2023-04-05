@@ -10,7 +10,7 @@ def get_args():
     parser.add_argument('--det_model', type = str,
                         help ='you can select from yolo,faster and retinanet',
                         default='retinanet')
-    parser.add_argument('--det_conf', type = float, default=0.5,
+    parser.add_argument('--det_conf', type = float, default=0.1,
                         help ='Confidence threshold of your detection model')
     parser.add_argument('--cla_model', type = str,
                         help ='you can select from resnet,resnext and efficientnet',
@@ -35,7 +35,7 @@ def get_args():
                         default = False)
     parser.add_argument('--evaluate',type = bool,
                         help = 'whether to evaluate the reslt,default is False',
-                        default = False)
+                        default = True)
     args = parser.parse_args()
     
     #if the image_root input is with extension(*.JPG) wrap into list
