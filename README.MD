@@ -83,8 +83,8 @@ Image_folder (eg Bird_A)
 ## Run all experiments:
 You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
 
-1. Download drone_collection.zip and then extract all images to *example_images* folder. [1](https://www.baidu.com/) 
-2. Download checkpoint.zip and then extract all model weights to *checkpoint* folder
+1. Download drone_collection.zip and then extract all images to **example_images** folder. [1](https://www.baidu.com/) 
+2. Download checkpoint.zip and then extract all model weights to **checkpoint** folder
 3. change directory to Waterfowl_detector_pipeline and run:
 ```
 python multi_inference.py
