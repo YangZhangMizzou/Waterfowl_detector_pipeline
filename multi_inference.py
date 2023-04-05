@@ -2,7 +2,7 @@ import os
 import glob
 
 model_list = ['retinanet','yolo','faster']
-all_folders_dataset = glob.glob('./example_images/drone_collection_dataset/test/*')
+all_folders_dataset = glob.glob('./example_images/*/test/*')
 
 for folder in all_folders_dataset:
 	for model in model_list:
