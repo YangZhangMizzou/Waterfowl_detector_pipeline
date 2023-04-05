@@ -82,8 +82,11 @@ Image_folder (eg Bird_A)
 ```
 ## Run all experiments:
 You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
+
+1. extract all images from drone_collection.zip to example_images folder
 ```
-extract all images from drone_collection.zip to example_images folder
+
+```
 
 ## Run the Scripts:
 Once you have the input file ready and in correct virtual env, you can use the file **inference_image_list.py** to start inference the images:
