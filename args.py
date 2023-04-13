@@ -17,6 +17,8 @@ def get_args():
                         default='')
     parser.add_argument('--image_root',type = str,
                         help = 'The root dir where image are stores')
+    parser.add_argument('--csv_root',type = str,
+                        help = 'The root dir where image info are stores')
     parser.add_argument('--image_ext',type = str, default = 'JPG',
                         help = 'the extension of the image(without dot), default is JPG')
     parser.add_argument('--image_altitude',type = int, default = 90,

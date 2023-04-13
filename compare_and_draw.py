@@ -4,6 +4,14 @@ import pandas as pd
 import glob
 import cv2
 import statistics
+import os
+
+import matplotlib.pyplot as plt
+import seaborn as sn
+import pandas as pd
+from sklearn.metrics import confusion_matrix, classification_report
+ 
+
 
 def IoU(true_box, pred_box):
 
@@ -27,14 +35,24 @@ def draw_image(image_dir,output_dir,tp_list,fp_list,fn_list,tp_cate_list,cate = 
 	for box in fp_list:
 		cv2.polylines(raw_image, np.array([[(int((box[0]+box[2])/2), box[1]), (box[0], box[3]), (box[2], box[3])]]), True, (0,0,255), 3)
 	for box in tp_list:
-		cv2.rectangle(raw_image, (box[0],box[1]), (box[2],box[3]), (0,0,255), 3)
-		cv2.putText(raw_image, str(box[-1]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+		cv2.rectangle(raw_image, (box[0],box[1]), (box[2],box[3]), (0,255,0), 3)
+		cv2.putText(raw_image, str(box[-1])+'_'+str(box[-2]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 	if cate:
 		for box in tp_cate_list:
 			cv2.rectangle(raw_image, (box[0],box[1]), (box[2],box[3]), (255,0,0), 5)
 			cv2.putText(raw_image, str(box[-1]), (int(box[0]), int(box[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-	save_dir = output_dir+'/'+image_dir.split('/')[-1].replace('.','_eval.')
+
+	save_dir = os.path.join(output_dir,os.path.split(image_dir)[-1])
 	cv2.imwrite(save_dir,raw_image)
+
+def simple_str(s):
+	ss = ["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
+	"Mallard Male","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
+	"Shoveler_Male","Snow/Ross Goose","White-fronted Goose"]
+	if s not in ss:
+		return 'Unknown'
+	else:
+		return s
 
 def calculate_precis_recall(true_bbox,pred_bbox,iou):
     fn = 0
@@ -57,11 +75,8 @@ def calculate_precis_recall(true_bbox,pred_bbox,iou):
     else:
         for t_bbox in true_bbox:
             iou_val = []
-            positive = [] 
             for p_bbox in pred_bbox:
                 iou_val.append(IoU(t_bbox,p_bbox))
-                if IoU(t_bbox,p_bbox) > iou:
-                	positive = p_bbox
 
             if sum(np.array(iou_val)>iou)==0:
                 fn += 1
@@ -69,8 +84,11 @@ def calculate_precis_recall(true_bbox,pred_bbox,iou):
             else :
                 tp+=1
                 taken = iou_val.index(max(iou_val))
-                tp_list.append(pred_bbox[taken])
-                if pred_bbox[taken][-1] == t_bbox[-1]:
+                tmp_pred = []
+                tmp_pred.extend(pred_bbox[taken])
+                tmp_pred.append(t_bbox[-1])
+                tp_list.append(tmp_pred)
+                if pred_bbox[taken][-1] == simple_str(t_bbox[-1]):
                 	tp_cate +=1
                 	tp_cate_list.append(pred_bbox[taken])
                 pred_bbox.remove(pred_bbox[taken])
@@ -78,14 +96,63 @@ def calculate_precis_recall(true_bbox,pred_bbox,iou):
     fp_list = pred_bbox
     return tp,fp,fn,tp_cate,tp_list,fp_list,fn_list,tp_cate_list
 
-def read_box_from_gt_txt(txt_dir):
+def get_confusion_matrix(true_bbox,pred_bbox,iou):
+	ss = ["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
+	"Mallard Male","Not a bird","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
+	"Shoveler_Male","Snow/Ross Goose","Unknown","White-fronted Goose"]
+	# conf_matrix = np.zeros((len(ss), len(ss)))
+	y_true = []
+	y_pred = []
+	if len(true_bbox) == 0:
+		for p_bbox in pred_bbox:
+			y_true.append(ss.index('Not a bird'))
+			y_pred.append(ss.index(p_bbox[-1]))
+	else:		
+		for t_bbox in true_bbox:
+			iou_val = []
+			for p_bbox in pred_bbox:
+				iou_val.append(IoU(t_bbox,p_bbox))
+			if iou_val!=[]:
+				if max(iou_val) < iou:
+					# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index('Not a bird')] += 1
+					y_true.append(ss.index(simple_str(t_bbox[-1])))
+					y_pred.append(ss.index('Not a bird'))
+				else :
+					taken = iou_val.index(max(iou_val))
+					# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index(pred_bbox[taken][-1])] += 1
+					y_true.append(ss.index(simple_str(t_bbox[-1])))
+					y_pred.append(ss.index(pred_bbox[taken][-1]))
+					pred_bbox.remove(pred_bbox[taken])
+			else:
+				# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index('Not a bird')] += 1
+				y_true.append(ss.index(simple_str(t_bbox[-1])))
+				y_pred.append(ss.index('Not a bird'))
+	# conf_matrix = confusion_matrix(y_true, y_pred)
+	return y_true,y_pred
+
+def plot_confusion_matrix(y_true,y_pred,save_dir):
+	label_classes = [i for i in list(range(21))]
+	conf_matrix = confusion_matrix(y_true, y_pred, labels=label_classes)
+	df_cm = pd.DataFrame(conf_matrix, index = [i for i in list(range(21))],columns = label_classes)
+	plt.figure(figsize = (10,7))
+	sn.heatmap(df_cm, annot=True)
+	plt.savefig(os.path.join(save_dir,"confusion_matrix.png"))
+	with open(os.path.join(save_dir,"metrics.txt"), 'w') as f:
+		f.write('\nThe classification report shows below\n'+classification_report(y_true, y_pred, labels=label_classes))
+
+def read_box_from_gt_txt(txt_dir,if_cate=False):
 	bbox_list = []
+	if if_cate:
+		txt_dir = txt_dir.replace('.txt','_class.txt')
 	with open(txt_dir, "r") as f:
 		lines = f.readlines()
 		if lines != []:
 			for line in lines:
 				part = line.split(',')
-				bbox_list.append([int(part[-4]),int(part[-3]),int(part[-2]),int(part[-1]),part[0]])
+				if if_cate:
+					bbox_list.append([int(part[-4]),int(part[-3]),int(part[-2]),int(part[-1]),part[1]])
+				else:
+					bbox_list.append([int(part[-4]),int(part[-3]),int(part[-2]),int(part[-1]),part[0]])
 	return bbox_list
 
 def read_box_from_pred_txt(txt_dir,thresh = 0.0):
@@ -101,8 +168,7 @@ def read_box_from_pred_txt(txt_dir,thresh = 0.0):
 	return bbox_list
 
 def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',threshhold = 0.5,iou = 0.3,if_cate = True):
-	predict_txt_list = sorted(glob.glob(prediction_dir+'/*.txt'))
-
+	predict_txt_list = sorted(glob.glob(os.path.join(prediction_dir,'*.txt')))
 	false_pred = []
 	true_pred = []
 	false_neg =[]
@@ -113,10 +179,14 @@ def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',thres
 	f1_score_per_image = []
 	tp_cates = []
 
+	if if_cate:
+		y_true_total = []
+		y_pred_total = []
+
 	for index in range(len(predict_txt_list)):
 
-		gt_txt = ground_truth_dir +'/'+ predict_txt_list[index].split('/')[-1]
-		gt_list = read_box_from_gt_txt(gt_txt)
+		gt_txt = os.path.join(ground_truth_dir,os.path.split(predict_txt_list[index])[-1])
+		gt_list = read_box_from_gt_txt(gt_txt,if_cate)
 		pred_list = read_box_from_pred_txt(predict_txt_list[index],threshhold)
 		image_dir = gt_txt.replace('.txt','.{}'.format(image_type))
 		tp,fp,fn,tp_cate,tp_list,fp_list,fn_list,tp_cate_list = calculate_precis_recall(gt_list,pred_list,iou)
@@ -140,6 +210,13 @@ def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',thres
 		record[index].extend([tp+fp,tp+fn,tp,fp,fn,precision_this_image,recall_this_image,f1_score_this_image,count_error_this_image])
 		count_error_per_image.append(count_error_this_image)
 
+		if if_cate:
+			gt_list = read_box_from_gt_txt(gt_txt,if_cate)
+			pred_list = read_box_from_pred_txt(predict_txt_list[index],threshhold)
+			y_true,y_pred =  get_confusion_matrix(gt_list,pred_list,iou)
+			y_true_total.extend(y_true)
+			y_pred_total.extend(y_pred)
+
 
 	precision = (1.0*np.sum(true_pred))/(1.0*np.sum(true_pred)+1.0*np.sum(false_pred)) 
 	recall = (1.0*np.sum(true_pred)/(1.0*(np.sum(true_pred)+np.sum(false_neg))))
@@ -148,6 +225,7 @@ def compare_draw(record,prediction_dir,ground_truth_dir,image_type = 'JPG',thres
 	cate_precision = (1.0*np.sum(tp_cates))/(1.0*np.sum(true_pred)+1.0*np.sum(false_pred)) 
 	cate_recall = (1.0*np.sum(tp_cates)/(1.0*(np.sum(true_pred)+np.sum(false_neg))))
 	cate_f1_score = 2*cate_precision*cate_recall/(cate_precision+cate_recall)
-
+	if if_cate:
+		plot_confusion_matrix(y_true_total,y_pred_total,prediction_dir.replace('detection-results',''))
 	return record,round(precision,2),round(recall,2),round(f1_score,2),round(cate_precision,2),round(cate_recall,2),round(cate_f1_score,2),round(count_error,2)
 

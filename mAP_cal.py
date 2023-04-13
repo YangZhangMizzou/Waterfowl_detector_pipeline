@@ -1,6 +1,7 @@
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 def IoU2(pred_bbox, true_box):
@@ -124,7 +125,7 @@ def mAp_calculate(image_name_list, gt_txt_list, pred_txt_list, iou_thresh):
     gt_dict = {}
     total_gt_box = 0
     for idx, gt_file in enumerate(gt_txt_list):
-        gt_name = image_name_list[idx].split('/')[-1].split('.')[0]
+        gt_name = os.path.split(image_name_list[idx])[-1].split('.')[0]
         gt_bbox = []
         try:
             with open(gt_file, 'r') as f:
@@ -139,7 +140,7 @@ def mAp_calculate(image_name_list, gt_txt_list, pred_txt_list, iou_thresh):
     pred_dict = {}
     total_pred_box = 0
     for idx, pred_file in enumerate(pred_txt_list):
-        pred_name = image_name_list[idx].split('/')[-1].split('.')[0]
+        pred_name = os.path.split(image_name_list[idx])[-1].split('.')[0]
         with open(pred_file, 'r') as f:
             pred_data = f.readlines()
         pred_bbox = []
@@ -155,13 +156,11 @@ def mAp_calculate(image_name_list, gt_txt_list, pred_txt_list, iou_thresh):
     while True:
         pred_head = ([j[0] if j != [] else [-1, 0, 0, 0, 0]
                      for j in pred_dict.values()])
-        #print (pred_head)
         selected_head = max(pred_head)
         if (selected_head == [-1, 0, 0, 0, 0]):
             break
         selected_index = pred_head.index(selected_head)
         image_name = list(pred_dict.keys())[selected_index]
-        # list(pred_dict.values())[selected_index].remove(selected_head)
         pred_dict[image_name].remove(selected_head)
         gt_bbox = gt_dict[image_name]
         re = match_GT(selected_head, gt_bbox,
@@ -200,7 +199,7 @@ def plot_f1_score(precision, recall, dataset_name, pred_dir, area, label, color)
         f1 = 2*precision[i]*recall[i]/(precision[i]+recall[i]+0.00001)
         f1_list.append(f1)
     pred_bbox = []
-    for pred_file in glob.glob(pred_dir+'/*.txt'):
+    for pred_file in glob.glob(os.path.join(pred_dir,'*.txt')):
         with open(pred_file, 'r') as f:
             pred_data = f.readlines()
         for line in pred_data:
@@ -216,22 +215,3 @@ def plot_f1_score(precision, recall, dataset_name, pred_dir, area, label, color)
     plt.xlabel('confidence threshold')
     plt.ylabel('F1_score')
     return conf_thresh
-
-
-if __name__ == '__main__':
-
-    dataset_name = 'Bird_B'
-    root_dir = '/home/zt253/Models/Retinanet_inference_example/example_images/{}'.format(
-        dataset_name)
-    image_name_list = sorted(glob.glob(
-        root_dir+'/*.JPG')+glob.glob(root_dir+'/*.jpg')+glob.glob(root_dir+'/*.png'))
-    gt_txt_list = sorted([i for i in glob.glob(
-        root_dir+'/*.txt') if 'mask' not in i])
-    pred_txt_list = sorted(glob.glob(
-        '/home/zt253/Models/Retinanet_inference_example/checkpoint/{}/inference/detection-results'.format(dataset_name)+'/*.txt'))
-    print(len(image_name_list), len(gt_txt_list), len(pred_txt_list))
-    precision, recall, sum_AP, mrec, mprec, area = mAp_calculate(
-        image_name_list=image_name_list, gt_txt_list=gt_txt_list, pred_txt_list=pred_txt_list, iou_thresh=0.3)
-    plot_mAp(precision, recall, mprec, mrec,
-             dataset_name, area, dataset_name, color='r')
-    plt.show()

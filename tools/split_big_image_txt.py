@@ -51,13 +51,6 @@ def read_gps_new(image_name):
     altitude = 208 + 90
   return coor_lat, coor_lont, altitude
 
-def read_gps_from_path(image_name):
-  coor_lat = 39.761838833333336
-  coor_lont = -93.23834030555555
-  tmp = image_name.split('.')[0].split('_')[-1]
-  altitude = 208 + int(tmp[0:len(tmp)-1])
-  return coor_lat, coor_lont, altitude
-
 def get_sub_image(mega_image,image_name,overlap=0.0,ratio=1):
     #mage_image: original image
     #ratio: ratio * 512 counter the different heights of image taken
@@ -171,8 +164,6 @@ for image_dir in image_list:
                 bbox = IoU(image_p,bbox_item)
                 if bbox != 0:
                     bbox_str += '0 {} {} {} {}\n'.format((bbox[0]+bbox[2])/1024,(bbox[1]+bbox[3])/1024,(bbox[2]-bbox[0])/512,(bbox[3]-bbox[1])/512)
-            
-            # if bbox_str != '':
             if True:
                 cv2.imwrite (sub_image_dir+'/images/'+image_dir.split('/')[-1].split('.')[0]+'_'+str(coor_list[i][0])+'_'+str(coor_list[i][1])+'.JPG',cv2.resize(sub_image_list[i],(512,512),interpolation = cv2.INTER_AREA))
                 with open(sub_image_dir+'/labels/'+image_dir.split('/')[-1].split('.')[0]+'_'+str(coor_list[i][0])+'_'+str(coor_list[i][1])+'.txt','w') as f:

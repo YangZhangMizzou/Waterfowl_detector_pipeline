@@ -19,6 +19,7 @@ from tqdm import tqdm
 from mAP_cal import mAp_calculate,plot_f1_score,plot_mAp
 import shutil
 from compare_and_draw import compare_draw
+from classification_infernece_res18 import res18_classifier_inference
 
 
 from models.common import DetectMultiBackend
@@ -42,28 +43,26 @@ import collections
 from absl import app, flags
 
 
-# from utils_retina import read_LatLotAlt,get_GSD
-# from WaterFowlTools.mAp import mAp_calculate,plot_f1_score,plot_mAp
-# from WaterFowlTools.utils import py_cpu_nms, get_image_taking_conditions, get_sub_image
-
 warnings.filterwarnings("ignore")
 
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 ])
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+device_name = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device(device_name)
+# device = torch.device('cpu')
+# device_name = 'cpu'
 
 
 def get_model_conf_threshold ():
     return args.det_conf
 
 def read_csv_info(csv_dir):
-    df = pd.read_csv(csv_dir)
+    df = pd.read_csv(csv_dir, usecols=['image_name','height'])
     altitude_dict = {}
     for line in df.values.tolist():
-        altitude_dict[line[1].split('.')[0]] = int(line[-2])
+        altitude_dict[line[0].split('.')[0]] = int(line[1])
     return altitude_dict
 
 
@@ -101,14 +100,13 @@ def prepare_retina_net(model_dir,kwargs):
     return net
 
 def prepare_yolo_net(model_dir):
-    device = select_device('')
-    model = DetectMultiBackend(model_dir, device=device, dnn=False, data='./configs/BirdA_all.yaml', fp16=False)
+    model = DetectMultiBackend(model_dir, device=device, dnn=False, data=os.path.join('configs','BirdA_all.yaml'), fp16=False)
     return model
 
 def get_detectron_predictor(model_dir):
     cfg = get_cfg()
-    cfg.merge_from_file('./configs/COCO-Detection/faster_rcnn_R_50_FPN_1x.yaml')
-    cfg.MODEL.DEVICE = 'cuda'
+    cfg.merge_from_file(os.path.join('configs','COCO-Detection','faster_rcnn_R_50_FPN_1x.yaml'))
+    cfg.MODEL.DEVICE = device_name
     cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8], [16], [32],[64],[128]]
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon)
     cfg.MODEL.WEIGHTS = model_dir
@@ -116,12 +114,48 @@ def get_detectron_predictor(model_dir):
     predictor = DefaultPredictor(cfg)
     return predictor
 
-def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude=True,  defaultAltitude=[],**kwargs):
+# def inference_mega_image_Retinanet_new(image_list, model_dir, image_out_dir,text_out_dir, visualize, altitude_dict,device,scaleByAltitude, defaultAltitude=[],**kwargs):
+#     model_type = kwargs['model_type']
+#     if (model_type=='Bird_drone_KNN'):
+#         load_w_config = True
+#     else:
+#         load_w_config = False
+#     model = Retinanet_instance(transform,model_type,model_dir,device,load_w_config,int(defaultAltitude[0]))
+#     record = []
+#     for idxs, image_dir in (enumerate(image_list)):
+#         start_time = time.time()
+#         mega_image,bbox_list = model.inference(image_dir,0.2,scaleByAltitude)
+#         txt_name = os.path.basename(image_dir).split('.')[0]+'.txt'
+#         num_bird = 0
+#         with open(os.path.join(text_out_dir,txt_name), 'w') as f:
+#             if (len(bbox_list) != 0):
+#                 print('Finished on {},\t Found {} birds'.format(
+#                 os.path.basename(image_dir), len(bbox_list)))
+#                 bbox_list = sorted(bbox_list,key = lambda x: x[4],reverse = True)
+#                 for box in bbox_list:
+#                     f.writelines('bird,{},{},{},{},{}\n'.format(
+#                         box[4], int(box[0]), int(box[1]), int(box[2]), int(box[3])))
+#         mega_image = cv2.cvtColor(mega_image,cv2.COLOR_RGB2BGR)
+#         cv2.imwrite(os.path.join(image_out_dir,os.path.basename(image_dir)), mega_image)
+#         try:
+#             re = read_LatLotAlt(image_dir)
+#         except:
+#             re = {'latitude':0.0,
+#                   'longitude':0.0,
+#                   'altitude':0.0}
+#         record.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
+#                        defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],
+#                        num_bird,round(time.time()-start_time,2)])
+#     record = pd.DataFrame(record)
+#     record.to_csv(kwargs['csv_out_dir'],header = ['image_name','date','location','altitude','latitude_meta','longitude_meta','altitude_meta','num_birds','time_spent(sec)'],index = True)
+
+def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude,  defaultAltitude=[],**kwargs):
     conf_thresh = get_model_conf_threshold()
     # model_dir,ref_altitude = get_model_extension(model_dir=model_dir,defaultaltitude=defaultAltitude[0])
-    model_30 = model_root+'/final_model_alt_30.pkl'
-    model_60 = model_root+'/final_model_alt_60.pkl'
-    model_90 = model_root+'/final_model_alt_90.pkl'
+
+    model_30 = os.path.join(model_root,'final_model_alt_30.pkl')
+    model_60 = os.path.join(model_root,'final_model_alt_60.pkl')
+    model_90 = os.path.join(model_root,'final_model_alt_90.pkl')
     model_list = [model_30,model_60,model_90]
 
     net_list = []
@@ -133,7 +167,7 @@ def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_ou
         
         start_time = time.time()
         altitude = int(defaultAltitude[idxs])
-        image_name = image_dir.split('/')[-1]
+        image_name = os.path.split(image_dir)[-1]
 
         image_taken_height,model_index,model_height = 60,1,60
         ratio = 1.0
@@ -196,10 +230,11 @@ def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_ou
 def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False,  defaultAltitude=[],**kwargs):
     record_list = []
 
-    model_15_dir = model_root+'/15.pt'
-    model_30_dir  = model_root+'/30.pt'
-    model_60_dir  = model_root+'/60.pt'
-    model_90_dir  = model_root+'/90.pt'
+    model_15_dir = os.path.join(model_root,'15.pt')
+    model_30_dir = os.path.join(model_root,'30.pt')
+    model_60_dir = os.path.join(model_root,'60.pt')
+    model_90_dir = os.path.join(model_root,'90.pt')
+
     model_15 = prepare_yolo_net(model_15_dir)
     model_30 = prepare_yolo_net(model_30_dir)
     model_60 = prepare_yolo_net(model_60_dir)
@@ -218,9 +253,8 @@ def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir
             mega_imgae_id += 1
             mega_image  = cv2.imread(image_dir)
 
-            image_name = image_dir.split('/')[-1]
+            image_name = os.path.split(image_dir)[-1]
             image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
-            # ratio = round(model_height/image_height, 2)
             ratio = 1.0
             model = model_list[model_index]
 
@@ -281,10 +315,11 @@ def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_d
     
     record_list = []
 
-    model_15_dir = model_root+'/Bird_GIJ_15m/model_final.pth'
-    model_30_dir  = model_root+'/Bird_GIJ_30m/model_final.pth'
-    model_60_dir  = model_root+'/Bird_GIJ_60m/model_final.pth'
-    model_90_dir  = model_root+'/Bird_GIJ_90m/model_final.pth'
+    model_15_dir = os.path.join(model_root,'Bird_GIJ_15m','model_final.pth')
+    model_30_dir = os.path.join(model_root,'Bird_GIJ_30m','model_final.pth')
+    model_60_dir = os.path.join(model_root,'Bird_GIJ_60m','model_final.pth')
+    model_90_dir = os.path.join(model_root,'Bird_GIJ_90m','model_final.pth')
+
     model_15 = get_detectron_predictor(model_15_dir)
     model_30 = get_detectron_predictor(model_30_dir)
     model_60 = get_detectron_predictor(model_60_dir)
@@ -308,7 +343,7 @@ def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_d
             ratio =  1
             sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.2,ratio = 1)
 
-            image_name = image_dir.split('/')[-1]
+            image_name = os.path.split(image_dir)[-1]
             image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
             ratio = 1.0
             predictor = model_list[model_index]
@@ -360,26 +395,21 @@ def prepare_classifier(model_name,num_of_classes):
         model = ResNet.from_pretrained('resnet18')
         num_ftrs = model.fc.in_features
         model.fc = nn.Linear(num_ftrs, num_of_classes)
-        savedweight = './checkpoint/classifier/resnet18-sklearn-sf-vr-last.pt'
-    if  model_name == 'resnext':
-        model = models.resnext50_32x4d(pretrained=True)
-        num_ftrs = model.fc.in_features
-        model.fc = nn.Linear(num_ftrs, num_of_classes)
-        savedweight = './checkpoint/classifier/resnext50-sklearn-last.pt'
-    if  model_name == 'efficientnet':
-        model = ResNet.from_pretrained('efficientnet-b3')
-        num_ftrs = model._fc.in_features
-        model._fc = nn.Linear(num_ftrs, num_of_classes)
+        savedweight = os.path.join('checkpoint','classifier','last-resnet18-realbirds.pt')
+        checkpoint = torch.load(savedweight)
+        model.load_state_dict(checkpoint)
+        model.eval()
+        model = model.to(device_name)
+        return model
 
-    checkpoint = torch.load(savedweight)
-    model.load_state_dict(checkpoint)
-    model.eval()
-    model = model.to('cuda')
-    return model
+
+def simple_str(s):
+    return "".join(filter(str.isalnum,s.lower()))
+
 
 def crop_bird_from_image(image_data,bbox):
     height, width, channels = image_data.shape
-    return image_data[max(bbox[1],0):min(bbox[3],height),max(bbox[0],0):min(bbox[2],width)]
+    return cv2.resize(image_data[max(bbox[1],0):min(bbox[3],height),max(bbox[0],0):min(bbox[2],width)], (128,128), interpolation = cv2.INTER_AREA)
 
 def build_dataloader(testdir):
          
@@ -399,22 +429,21 @@ def build_dataloader(testdir):
          batch_size=1)
     return test_iterator
 
-ss=['Ring-necked duck Male', 'American Widgeon Female', 'Ring-necked duck Female', 
-'Canvasback_Male','Canvasback_Female', 'Scaup_Male', 'Shoveler_Male', 'Not a bird', 
-'Shoveler Female', 'Gadwall', 'Unknown', 'Mallard Male', 'Pintail Male', 'Green-winged teal', 
-    'White-fronted Goose', 'Snow/Ross Goose (blue)', 'Snow/Ross Goose', 'Mallard Female', 
-    'Coot', 'Pelican', 'American Widgeon Male', 'Canada Goose']
+ss=["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
+"Mallard Male","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
+"Shoveler_Male","Snow/Ross Goose","White-fronted Goose"]
 
 def predict_classes(images_root,bbox_dir,select_model):
-    num_of_classes = 22
-    txt_files = glob.glob(bbox_dir+'/*.txt')
+    num_of_classes = 19
+    txt_files = glob.glob(os.path.join(bbox_dir,'*.txt'))
     model = prepare_classifier(select_model,num_of_classes)
+    print('There are {} images to be classied...'.format(str(len(txt_files))))
     for txt_dir in txt_files:
-        txt_name = txt_dir.split('/')[-1].split('.')[0]
-        image_dir = images_root +'/'+ txt_name + '.{}'.format(args.image_ext)
-        if not os.path.exists(bbox_dir+'/tmp'):
-            os.makedirs(bbox_dir+'/tmp')
-            tmp_image_dir = bbox_dir+'/tmp/unknown'
+        txt_name = os.path.split(txt_dir)[-1].split('.')[0]
+        image_dir = os.path.join(images_root,txt_name+'.{}'.format(args.image_ext))
+        if not os.path.exists(os.path.join(bbox_dir,'tmp')):
+            os.makedirs(os.path.join(bbox_dir,'tmp'))
+            tmp_image_dir =os.path.join(bbox_dir,'tmp','unknown')
             os.makedirs(tmp_image_dir)
             with open(txt_dir, "r") as f:
                 lines = f.readlines()
@@ -425,13 +454,14 @@ def predict_classes(images_root,bbox_dir,select_model):
                         confidence = float(line.split(',')[-5])
                         bbox = [int(line.split(',')[-4]),int(line.split(',')[-3]),int(line.split(',')[-2]),int(line.split(',')[-1])] #x1y1x2y2
                         bird_crop = crop_bird_from_image(image_data,bbox)
-                        cv2.imwrite(tmp_image_dir+'/{}.JPG'.format(index),bird_crop)
+                        cv2.imwrite(os.path.join(tmp_image_dir,'{}.JPG'.format(index)),bird_crop)
                         index += 1
-                    test_iterator = build_dataloader(bbox_dir+'/tmp')
+                    test_iterator = build_dataloader(os.path.join(bbox_dir,'tmp'))
                     y_preds=[]
                     with torch.no_grad():
-                        for (x, y) in tqdm(test_iterator):
-                            x = x.to('cuda')
+                        for (x, y) in test_iterator:
+                            # x = x.to('cuda')
+                            x = x.to(device_name)
                             y_pred = model(x)
                             output = (torch.max(torch.exp(y_pred), 1)[1]).data.cpu().numpy()
                             y_preds.extend(output)
@@ -439,7 +469,7 @@ def predict_classes(images_root,bbox_dir,select_model):
                     with open(txt_dir, "w") as f:
                         for j in range(len(lines)):
                             f.write(lines[j].replace('bird',preds[j]))
-            shutil.rmtree(bbox_dir+'/tmp/')
+            shutil.rmtree(os.path.join(bbox_dir,'tmp'))
 
 if __name__ == '__main__':
     args = get_args()
@@ -467,10 +497,10 @@ if __name__ == '__main__':
     os.makedirs(text_out_dir, exist_ok=True)
     record = []
 
-    altitude_dict = read_csv_info('./example_images/image_info.csv')
+    altitude_dict = read_csv_info(args.csv_root)
 
     if(args.det_model == 'retinanet'):
-        model_dir = './checkpoint/retinanet/general'
+        model_dir = os.path.join('checkpoint','retinanet','general')
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_Retinanet(
@@ -478,7 +508,7 @@ if __name__ == '__main__':
         scaleByAltitude=args.use_altitude, defaultAltitude=altitude_list,date_list = date_list,location_list =location_list, 
         visualize = args.visualize,device = device)
     if(args.det_model == 'yolo'):
-        model_dir = './checkpoint/yolo/height_varient'
+        model_dir = os.path.join('checkpoint','yolo','height_varient')
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_YOLO(
@@ -486,7 +516,7 @@ if __name__ == '__main__':
         scaleByAltitude=args.use_altitude,  defaultAltitude=altitude_list,date_list = date_list,location_list =location_list, 
         visualize = args.visualize,device = device)
     if(args.det_model == 'faster'):
-        model_dir = './checkpoint/faster/Model_Bird_GIJ_altitude_Zhenduo'
+        model_dir = os.path.join('checkpoint','faster','Model_Bird_GIJ_altitude_Zhenduo')
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_faster(
@@ -496,14 +526,20 @@ if __name__ == '__main__':
 
     if (args.cla_model != ''):
         print('predicting classes...')
-        predict_classes(args.image_root,text_out_dir,args.cla_model)
+        if args.cla_model== 'resnet':
+            predict_classes(args.image_root,text_out_dir,args.cla_model)
+        elif args.cla_model=='res18':
+            model_dir = os.path.join('checkpoint','classifier','Res18_Bird_I','model.pth')
+            category_index_dir = model_dir.replace('model.pth','category_index.json')
+            res18_classifier_inference(model_dir,category_index_dir,image_list,text_out_dir,device)
+
     if (args.evaluate):
         if_cate = True
         if args.cla_model == '':
             if_cate = False
         precision, recall, sum_AP, mrec, mprec, area = mAp_calculate(image_name_list = image_name_list, 
                                                                     gt_txt_list=[os.path.splitext(i)[0]+'.txt' for i in image_list],
-                                                                    pred_txt_list = [text_out_dir+'/'+os.path.splitext(i)[0]+'.txt' for i in image_name_list],
+                                                                    pred_txt_list = [os.path.join(text_out_dir,i.replace(args.image_ext,'txt')) for i in image_name_list],
                                                                     iou_thresh=0.3, 
                                                                     )
 
@@ -525,7 +561,7 @@ if __name__ == '__main__':
         conf_thresh = conf_thresh_dict[args.det_model]
 
         record,precision,recall,f1_score,cate_precision,cate_recall,cate_f1_score,count_error = compare_draw(record,text_out_dir,args.image_root,args.image_ext,best_conf_thresh,0.3,if_cate)
-        log = open(target_dir+'/overall_performance.txt','w')
+        log = open(os.path.join(target_dir,'overall_performance.txt'),'w')
         log.write('The overall performance on all images is')
         log.write('\nThe precision will be'+str(precision))
         log.write('\nThe recall will be '+str(recall))

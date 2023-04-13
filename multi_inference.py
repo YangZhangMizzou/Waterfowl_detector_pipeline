@@ -1,13 +1,16 @@
 import os
 import glob
 
-model_list = ['retinanet','yolo','faster']
-all_folders_dataset = glob.glob('./example_images/*/test/*')
+model_list = ['yolo','faster','retinanet']
+dataset = 'drone_collection_habitat'
+# dataset = 'drone_collection_height'
+# dataset = 'drone_collection_dataset'
+all_folders_dataset = glob.glob(os.path.join('example_images',dataset,'test','*'))
+csv_root = os.path.join('example_images',dataset,'image_info.csv')
 
-for folder in all_folders_dataset:
-	for model in model_list:
-		image_type = folder.split('/')[-2]
-		category = folder.split('/')[-1]
-		save_dir = './Result/{}/{}/{}'.format(model,image_type,category)
-		os.system('python inference_image_height.py --image_root {}  --out_dir {} --evaluate True --det_model {} --image_ext {}'.format(folder,save_dir,model,'JPG'))
+for det_model in model_list:
+	for folder in all_folders_dataset:
+		category = os.path.split(folder)[-1]
+		save_dir = os.path.join('Result','0413',dataset,det_model,category)
+		os.system('python inference_image_height.py --image_root {}  --out_dir {} --evaluate True --det_model {} --image_ext {} --csv_root {}'.format(folder,save_dir,det_model,'JPG',csv_root))
  
