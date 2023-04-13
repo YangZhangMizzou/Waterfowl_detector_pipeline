@@ -80,7 +80,16 @@ Image_folder (eg Bird_A)
 ├── image_name2.txt # if want to evaluate
 └── ...
 ```
+## Run all experiments:
+You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
 
+1. Download [drone_collection.zip](https://drive.google.com/file/d/15SRYsCYhyWkT6no7416Qnok9sMZur23N/view?usp=sharing) and then extract all images to **example_images** folder. 
+2. Download [checkpoint.zip](https://drive.google.com/file/d/1LP9KfV6tEzuRJQga4DYmkAMQhqM8E7ek/view?usp=sharing) and then extract all model weights to **checkpoint** folder 
+3. change directory to Waterfowl_detector_pipeline and run:
+```
+python multi_inference.py
+```
+The inference may take a long time. Please be patient.
 
 ## Run the Scripts:
 Once you have the input file ready and in correct virtual env, you can use the file **inference_image_list.py** to start inference the images:
