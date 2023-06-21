@@ -71,12 +71,10 @@ pip install cycler
 ### Install dependency for YoloNAS and MixMatch
 
 ```
-pip install tqdm
 pip install supe_gradients==3.1.0
 pip install setuptools == 59.5.0
 pip install tensorboardX
 pip install progress
-pip install numpy
 ```
 
 
