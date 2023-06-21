@@ -33,10 +33,8 @@ We recommend to install pytorch with cuda to accelerate running speed.
 ```
 conda install pytorch==1.10.0 torchvision==0.11.0 torchaudio==0.10.0 cudatoolkit=11.3 -c pytorch -c conda-forge
 ```
-### Install dependency for FasterRCNN
 
-Install Detectron2 following the instructions on the website. https://detectron2.readthedocs.io/en/latest/index.html
-and then run the following command
+### Install basic dependency
 
 ```
 pip install pandas
@@ -46,6 +44,12 @@ pip install tqdm
 pip install efficientnet_pytorch
 pip install resnet_pytorch
 ```
+
+### Install dependency for FasterRCNN
+
+Install Detectron2 following the instructions on the website. https://detectron2.readthedocs.io/en/latest/index.html
+and then run the following command
+
 
 ### Install dependency for YOLOV5
 
@@ -71,8 +75,8 @@ pip install cycler
 ### Install dependency for YoloNAS and MixMatch
 
 ```
-pip install supe_gradients==3.1.0
-pip install setuptools == 59.5.0
+pip install super-gradients==3.1.0
+pip install setuptools==59.5.0
 pip install tensorboardX
 pip install progress
 ```
@@ -95,12 +99,17 @@ Image_folder (eg Bird_A)
 ## Run all experiments:
 You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
 
-1. Download [drone_collection.zip](https://drive.google.com/file/d/15SRYsCYhyWkT6no7416Qnok9sMZur23N/view?usp=sharing) and then extract all images to **example_images** folder. 
-2. Download [checkpoint.zip](https://drive.google.com/file/d/1LP9KfV6tEzuRJQga4DYmkAMQhqM8E7ek/view?usp=sharing) and then extract all model weights to **checkpoint** folder 
+1. Download [example_images.zip](https://drive.google.com/file/d/1nwzvAKL_fBVeFviAeDub3tpSmx-p_3ME/view?usp=share_link) and then extract all subfolders to **example_images** folder. 
+2. Download [checkpoints.zip](https://drive.google.com/file/d/1JtWigvusCxu2lmdN175Gh2apDeXLvhvZ/view?usp=share_link) and then extract all subfolders to **checkpoint** folder 
 3. change directory to Waterfowl_detector_pipeline and run:
 ```
 python multi_inference.py
 ```
+4. run the following command to do detection and classification test:
+```
+python multi_inference_classification.py
+```
+
 The inference may take a long time. Please be patient.
 
 ## Run the Scripts:
