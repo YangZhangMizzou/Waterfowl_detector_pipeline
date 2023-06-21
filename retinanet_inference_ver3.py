@@ -1,9 +1,12 @@
-from encoder import DataEncoder,DataEncoder_fusion
+from utils_knn import read_LatLotAlt,get_GSD,filter_slice
+from encoder_knn import DataEncoder,DataEncoder_fusion
 import torch
 import json
-from WaterFowlTools.utils import py_cpu_nms, get_image_taking_conditions, get_sub_image
+from tools import py_cpu_nms,get_sub_image
 import cv2
-from utils import read_LatLotAlt,get_GSD,filter_slice
+
+
+
 
 model_conf_threshold = {'Bird_A':0.2,
                         'Bird_B':0.2,
@@ -26,15 +29,16 @@ def get_model_conf_threshold (model_type):
         return model_conf_threshold[model_type]
     else:
         return 0.3
+        
 def get_model_extension(model_type,model_dir,altitude):
     if(model_type in model_extension):
         model_ext = model_extension[model_type]
         for altitude_thresh in model_ext:
             if (altitude_thresh>=altitude):
                 ref_altitude = model_ext[altitude_thresh][1]
-                model_dir = model_dir.replace('.pkl',model_ext[altitude_thresh][0]+'.pkl')
+                # model_dir = model_dir.replace('.pkl',model_ext[altitude_thresh][0]+'.pkl')
                 return model_dir,ref_altitude
-        model_dir = model_dir.replace('.pkl',model_ext[max(model_ext.keys())][0]+'.pkl')
+        # model_dir = model_dir.replace('.pkl',model_ext[max(model_ext.keys())][0]+'.pkl')
         return model_dir,model_ext[max(model_ext.keys())][1]
     else:
         return model_dir,altitude
@@ -58,7 +62,6 @@ class Retinanet_instance():
             config_dir = self.model_dir.replace('.pkl','.json')
             with open(config_dir,'r') as f:
                 cfg = json.load(f)
-            print (cfg['KNN_anchors'])
             from retinanet_fusion import RetinaNet
             self.model = RetinaNet(num_classes=1,num_anchors=len(cfg['KNN_anchors']))
             self.encoder = DataEncoder_fusion(anchor_wh=cfg['KNN_anchors'],device = self.device)
@@ -78,16 +81,16 @@ class Retinanet_instance():
         if (read_GPS):
             try:
                 altitude = read_LatLotAlt(image_dir)['altitude']
-                print ('Reading altitude from Meta data of {}'.format(altitude))
+                # print ('Reading altitude from Meta data of {}'.format(altitude))
             except:
                 altitude = self.altitude
-                print ('Meta data not available, use default altitude {}'.format(altitude))
+                # print ('Meta data not available, use default altitude {}'.format(altitude))
         else:
             altitude = self.altitude
-            print ('Using default altitude {}'.format(altitude))
+            # print ('Using default altitude {}'.format(altitude))
         GSD,ref_GSD = get_GSD(altitude,camera_type='Pro2', ref_altitude=self.ref_altitude)
         ratio = 1.0*ref_GSD/GSD
-        print('Image processing altitude: {} \t Processing scale {}'.format(altitude,ratio))
+        # print('Image processing altitude: {} \t Processing scale {}'.format(altitude,ratio))
         sub_image_list, coor_list = get_sub_image(
             mega_image, overlap=slice_overlap, ratio=ratio)
         

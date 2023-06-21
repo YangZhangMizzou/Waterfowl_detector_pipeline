@@ -8,16 +8,16 @@ def get_args():
     #                     help =' the type of the model,default type used is Bird_D',
     #                     default='Bird_D')
     parser.add_argument('--det_model', type = str,
-                        help ='you can select from yolo,faster and retinanet',
+                        help ='you can select from yolo,faster, retinanetknn and retinanet',
                         default='retinanet')
     parser.add_argument('--det_conf', type = float, default=0.1,
                         help ='Confidence threshold of your detection model')
     parser.add_argument('--cla_model', type = str,
-                        help ='you can select from resnet,resnext and efficientnet',
+                        help ='you can select from res18 and mixmatch',
                         default='')
     parser.add_argument('--image_root',type = str,
                         help = 'The root dir where image are stores')
-    parser.add_argument('--csv_root',type = str,
+    parser.add_argument('--csv_root',type = str, default='',
                         help = 'The root dir where image info are stores')
     parser.add_argument('--image_ext',type = str, default = 'JPG',
                         help = 'the extension of the image(without dot), default is JPG')
@@ -37,7 +37,7 @@ def get_args():
                         default = False)
     parser.add_argument('--evaluate',type = bool,
                         help = 'whether to evaluate the reslt,default is False',
-                        default = True)
+                        default = False)
     args = parser.parse_args()
     
     #if the image_root input is with extension(*.JPG) wrap into list

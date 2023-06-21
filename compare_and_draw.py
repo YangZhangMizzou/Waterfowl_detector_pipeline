@@ -11,7 +11,9 @@ import seaborn as sn
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report
  
-
+ss = ["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
+"Mallard Male","Not a bird","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
+"Shoveler_Male","Snow","Unknown","White-fronted Goose"]
 
 def IoU(true_box, pred_box):
 
@@ -46,10 +48,9 @@ def draw_image(image_dir,output_dir,tp_list,fp_list,fn_list,tp_cate_list,cate = 
 	cv2.imwrite(save_dir,raw_image)
 
 def simple_str(s):
-	ss = ["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
-	"Mallard Male","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
-	"Shoveler_Male","Snow/Ross Goose","White-fronted Goose"]
-	if s not in ss:
+	if 'Snow' in s:
+		return 'Snow'
+	elif s not in ss:
 		return 'Unknown'
 	else:
 		return s
@@ -63,8 +64,6 @@ def calculate_precis_recall(true_bbox,pred_bbox,iou):
     fp_list = []
     fn_list = []
     tp_cate_list = []
-    # tp_class_list = []
-    # tp_cate_class_list = []
 
     total_pred = len(pred_bbox)
     nneg = lambda x :max(0,x)
@@ -97,10 +96,7 @@ def calculate_precis_recall(true_bbox,pred_bbox,iou):
     return tp,fp,fn,tp_cate,tp_list,fp_list,fn_list,tp_cate_list
 
 def get_confusion_matrix(true_bbox,pred_bbox,iou):
-	ss = ["American Widgeon_Female","American Widgeon_Male","Canada Goose","Canvasback_Male","Coot","Gadwall","Green-winged teal","Mallard Female",
-	"Mallard Male","Not a bird","Pelican","Pintail_Female","Pintail_Male","Ring-necked duck Female","Ring-necked duck Male","Scaup_Male","Shoveler_Female",
-	"Shoveler_Male","Snow/Ross Goose","Unknown","White-fronted Goose"]
-	# conf_matrix = np.zeros((len(ss), len(ss)))
+
 	y_true = []
 	y_pred = []
 	if len(true_bbox) == 0:
@@ -114,20 +110,17 @@ def get_confusion_matrix(true_bbox,pred_bbox,iou):
 				iou_val.append(IoU(t_bbox,p_bbox))
 			if iou_val!=[]:
 				if max(iou_val) < iou:
-					# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index('Not a bird')] += 1
+
 					y_true.append(ss.index(simple_str(t_bbox[-1])))
 					y_pred.append(ss.index('Not a bird'))
 				else :
 					taken = iou_val.index(max(iou_val))
-					# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index(pred_bbox[taken][-1])] += 1
 					y_true.append(ss.index(simple_str(t_bbox[-1])))
 					y_pred.append(ss.index(pred_bbox[taken][-1]))
 					pred_bbox.remove(pred_bbox[taken])
 			else:
-				# conf_matrix[ss.index(simple_str(t_bbox[-1]))][ss.index('Not a bird')] += 1
 				y_true.append(ss.index(simple_str(t_bbox[-1])))
 				y_pred.append(ss.index('Not a bird'))
-	# conf_matrix = confusion_matrix(y_true, y_pred)
 	return y_true,y_pred
 
 def plot_confusion_matrix(y_true,y_pred,save_dir):

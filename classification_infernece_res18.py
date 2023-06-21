@@ -4,7 +4,6 @@ import cv2
 import torch
 from torchvision import transforms, utils
 import torchvision.models as models
-from tqdm import tqdm
 import json
 import glob
 import os
@@ -44,13 +43,8 @@ def res18_classifier_inference(model_dir,category_index_dir,image_list,detection
             cropped_image = image[coord[1]:coord[3],coord[0]:coord[2],:]
             inputs = test_transform(cropped_image).unsqueeze(0).to(device)
             out = resnet18(inputs)
-            out = torch.topk(out,2, dim=1)[1].squeeze().data
-            final_out = 0
-            for i in out:
-                if i not in [9]:
-                    final_out = i
-                    break
-            preds = category_list[final_out]
+            out = torch.topk(out,1, dim=1)[1].squeeze().data
+            preds = category_list[out]
             pred_data.append([preds,line[1],line[2],line[3],line[4],line[5]])
         with open(os.path.join(text_out_dir,'{}.txt'.format(file_name.split('.')[0])),'w') as f:
             for line in pred_data:

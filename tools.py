@@ -14,6 +14,8 @@ def get_sub_image(mega_image,overlap=0.2,ratio=1):
     coor_list = []
     sub_image_list = []
     w,h,c = mega_image.shape
+    if w < 512 or h < 512:
+        mega_image = image_padding(mega_image)
     size  = int(ratio*512)
     num_rows = int(w/int(size*(1-overlap)))
     num_cols = int(h/int(size*(1-overlap)))
@@ -40,6 +42,12 @@ def get_sub_image(mega_image,overlap=0.2,ratio=1):
                     coor_list.append([new_size*i,new_size*j])
                     sub_image_list.append (sub_image)
     return sub_image_list,coor_list
+
+def image_padding(mega_image):
+    w,h,c = mega_image.shape
+    result = np.full((max(512,h),max(512,w), 3), (0,0,0), dtype=np.uint8)
+    result[0:h,0:w] = mega_image
+    return result
 
 def py_cpu_nms(dets, thresh):  
     """Pure Python NMS baseline.""" 
@@ -68,6 +76,21 @@ def py_cpu_nms(dets, thresh):
         inds = np.where(ovr <= thresh)[0]  
         order = order[inds + 1]  
     return keep
+
+def filter_small_fp(bbox_list):  
+    """Remove small predictions"""
+    print('filter small crops')
+    bbox_area_list = []
+    new_bbox_list = []
+    for bbox in bbox_list:
+        bbox_area_list.append(bbox[-1])
+    average_area = np.mean(bbox_area_list)
+    for bbox in bbox_list:
+        if bbox[-1] > 0.25*average_area:
+            new_bbox_list.append(bbox)
+    return new_bbox_list
+
+
 
 
 def get_mean_and_std(dataset, max_load=10000):

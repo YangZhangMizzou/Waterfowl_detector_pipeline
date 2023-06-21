@@ -121,10 +121,8 @@ transform = transforms.Compose([
     transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))
 ])
 
-root_dir = '/home/yangzhang/robert_pipeline/Waterfowl_detector_pipeline/example_images/drone_collection_test'
-FOV =77#need calibration
-height = 30
-image_list = glob.glob(root_dir+'/*.JPG')
+root_dir = '/home/yangzhang/robert_pipeline/Waterfowl_detector_pipeline/example_images/drone_collection_height/test/30'
+image_list = glob.glob(root_dir+'/*.png')
 mega_imgae_dic = {}
 mega_imgae_id = 1
 bbox_id = 1
