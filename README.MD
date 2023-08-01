@@ -1,6 +1,6 @@
 # Waterfowl detector pipeline instruction
 
-This code is an demo only on how to apply retinanet,yolov5 and FasterRCNN onto the Waterfowl dataset. In this demo, pretrained general models of three detectors are provided and can be downloaded here https://drive.google.com/file/d/1Rgbn9JvzJb1vVu_l-l2D0g5R0-Vj3EXt/view?usp=sharing . Download and extract its content to folder 'checkpoints'.
+This code is an demo only on how to apply retinanet,yolov5 and FasterRCNN onto the Waterfowl dataset.
 
 ## System requirements
 Support both Windows system and Linux system, can be used with/without cuda environement.
@@ -84,7 +84,7 @@ Image_folder (eg Bird_A)
 You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
 
 1. Download [example_images.zip](https://drive.google.com/file/d/1nwzvAKL_fBVeFviAeDub3tpSmx-p_3ME/view?usp=share_link) and then extract all subfolders to **example_images** folder. 
-2. Download [checkpoints.zip](https://drive.google.com/file/d/1JtWigvusCxu2lmdN175Gh2apDeXLvhvZ/view?usp=share_link) and then extract all subfolders to **checkpoint** folder 
+2. Download [checkpoints.zip](https://drive.google.com/file/d/15e9wCSK0dGhfBiD1v5pubz34d1esDHU-/view?usp=drive_link) and then extract all subfolders to **checkpoint** folder 
 3. change directory to Waterfowl_detector_pipeline and run:
 ```
 python multi_inference.py
