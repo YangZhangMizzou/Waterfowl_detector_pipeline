@@ -45,6 +45,7 @@ pip install opencv-python
 pip install tqdm
 pip install efficientnet_pytorch
 pip install resnet_pytorch
+pip install scikit-learn
 ```
 
 ### Install dependency for YOLOV5
