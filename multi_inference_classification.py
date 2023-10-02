@@ -4,10 +4,12 @@ from datetime import date
 
 today = date.today()
 dataset = 'Bird_I_Waterfowl_SpeciesClassification'
+dataset_root = '/home/yangzhang/waterfowl_datasets'#change it to your dataset.
+
 det_models = ['yolonas']
 cla_models = ['mixmatch']
-all_folders_dataset = glob.glob(os.path.join('/home/yangzhang/waterfowl_datasets',dataset,'test'))
-csv_root = os.path.join('/home/yangzhang/waterfowl_datasets',dataset,'image_info.csv')
+all_folders_dataset = glob.glob(os.path.join(dataset_root,dataset,'test'))
+csv_root = os.path.join(dataset_root,dataset,'image_info.csv')
 
 for folder in all_folders_dataset:
 	for det_model in det_models:

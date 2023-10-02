@@ -5,8 +5,9 @@ from datetime import date
 today = date.today()
 model_list = ['yolonas']
 dataset = 'drone_collection_height'
-all_folders_dataset = glob.glob(os.path.join('/home/yangzhang/waterfowl_datasets',dataset,'test','*'))
-csv_root = os.path.join('/home/yangzhang/waterfowl_datasets',dataset,'image_info.csv')
+dataset_root = '/home/yangzhang/waterfowl_datasets'
+all_folders_dataset = glob.glob(os.path.join(dataset_root,dataset,'test','*'))
+csv_root = os.path.join(dataset_root,dataset,'image_info.csv')
 for det_model in model_list:
 	for folder in all_folders_dataset:
 		height = folder.split(os.sep)[-1]
