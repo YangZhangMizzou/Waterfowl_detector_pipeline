@@ -100,7 +100,7 @@ Image_folder (eg Bird_A)
 You can easily run all experiments on drone_collection dataset(all height, habitat, dataset) by only one command. Please follow the precedures carefully.
 
 1. Download [example_images.zip](https://drive.google.com/file/d/1nwzvAKL_fBVeFviAeDub3tpSmx-p_3ME/view?usp=share_link) and then extract all subfolders to **example_images** folder. 
-2. Download [checkpoints.zip](https://drive.google.com/file/d/1JtWigvusCxu2lmdN175Gh2apDeXLvhvZ/view?usp=share_link) and then extract all subfolders to **checkpoint** folder 
+2. Download [checkpoints.zip](https://drive.google.com/file/d/15e9wCSK0dGhfBiD1v5pubz34d1esDHU-/view?usp=drive_link) and then extract all subfolders to **checkpoint** folder 
 3. change directory to Waterfowl_detector_pipeline and run:
 ```
 python multi_inference.py
@@ -113,10 +113,10 @@ python multi_inference_classification.py
 The inference may take a long time. Please be patient.
 
 ## Run the Scripts:
-Once you have the input file ready and in correct virtual env, you can use the file **inference_image_list.py** to start inference the images:
+Once you have the input file ready and in correct virtual env, you can use the file **inference_image_height.py** to start inference the images:
 quick example(full command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --image_ext jpg \
@@ -130,7 +130,7 @@ python inference_image_list.py \
 ```
 quick example(easy command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --out_dir ./result/retinanet/Bird_A
