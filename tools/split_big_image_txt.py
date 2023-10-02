@@ -121,8 +121,8 @@ transform = transforms.Compose([
     transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))
 ])
 
-root_dir = '/home/yangzhang/robert_pipeline/Waterfowl_detector_pipeline/example_images/drone_collection_height/test/30'
-image_list = glob.glob(root_dir+'/*.png')
+root_dir = '/home/yangzhang/waterfowl_datasets/drone_collection_dataset/test/Bird-I'
+image_list = glob.glob(root_dir+'/*.JPG')
 mega_imgae_dic = {}
 mega_imgae_id = 1
 bbox_id = 1
@@ -148,7 +148,7 @@ for image_dir in image_list:
     check_and_make_dir(sub_image_dir+'/images/')
     check_and_make_dir(sub_image_dir+'/labels/')
 
-    txt_dir = image_dir.replace('.JPG','.txt')
+    txt_dir = image_dir.replace(image_dir.split('.')[-1],'txt')
     if os.path.exists(txt_dir):
         with open(txt_dir, 'r') as f:
             lines = f.readlines()

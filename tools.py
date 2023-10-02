@@ -79,7 +79,6 @@ def py_cpu_nms(dets, thresh):
 
 def filter_small_fp(bbox_list):  
     """Remove small predictions"""
-    print('filter small crops')
     bbox_area_list = []
     new_bbox_list = []
     for bbox in bbox_list:

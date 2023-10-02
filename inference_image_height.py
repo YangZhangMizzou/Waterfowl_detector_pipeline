@@ -161,10 +161,10 @@ def inference_mega_image_yolonas(image_list,model_root, image_out_dir,text_out_d
                     image_taken_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
                     ratio = round(model_height/image_taken_height, 2)
                     selected_model = net_list[model_index]
-                # sub_image_dir = './tmp.JPG'
-                # cv2.imwrite(sub_image_dir,sub_image)
+                sub_image_dir = './tmp.JPG'
+                cv2.imwrite(sub_image_dir,sub_image)
                 images_predictions = selected_model.predict(sub_image_dir)
-                # os.remove(sub_image_dir)
+                os.remove(sub_image_dir)
                 image_prediction = next(iter(images_predictions))
                 labels = image_prediction.prediction.labels
                 confidences = image_prediction.prediction.confidence
@@ -198,7 +198,7 @@ def inference_mega_image_yolonas(image_list,model_root, image_out_dir,text_out_d
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                               defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
+                               str(image_taken_height),re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def inference_mega_image_Retinanet_KNN(image_list, model_root, image_out_dir,text_out_dir, visualize, altitude_dict,device,scaleByAltitude, defaultAltitude=[],**kwargs):
@@ -246,7 +246,7 @@ def inference_mega_image_Retinanet_KNN(image_list, model_root, image_out_dir,tex
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                               defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
+                               str(image_taken_height),re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude,  defaultAltitude=[],**kwargs):
@@ -319,7 +319,7 @@ def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_ou
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                           defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
+                           str(image_taken_height),re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False,  defaultAltitude=[],**kwargs):
@@ -395,7 +395,7 @@ def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                           defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
+                           str(image_taken_height),re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False, defaultAltitude=[],**kwargs):
@@ -473,7 +473,7 @@ def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_d
                       'longitude':0.0,
                       'altitude':0.0}
             record_list.append([os.path.basename(image_dir),kwargs['date_list'][idxs],kwargs['location_list'][idxs],
-                           defaultAltitude[idxs],re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
+                           str(image_taken_height),re['latitude'],re['longitude'],re['altitude'],round(time.time()-start_time,2)])
     return record_list
 
 def prepare_classifier(model_name,num_of_classes):
@@ -681,6 +681,8 @@ if __name__ == '__main__':
         record.to_csv(csv_out_dir,header = ['image_name','date','location','altitude','latitude_meta','longitude_meta','altitude_meta','time_spent(sec)','pred_num_birds','gt_num_birds','tp','fp','fn','precision','recall','f1-score','count_error'],index = True)
 
         print('Complete image drawing!')
+
     argparse_dict = vars(args)
+
     with open(os.path.join(target_dir,'configs.json'),'w') as f:
         json.dump(argparse_dict,f,indent=4)

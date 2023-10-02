@@ -37,7 +37,7 @@ def get_args():
                         default = False)
     parser.add_argument('--evaluate',type = bool,
                         help = 'whether to evaluate the reslt,default is False',
-                        default = False)
+                        default = True)
     args = parser.parse_args()
     
     #if the image_root input is with extension(*.JPG) wrap into list
