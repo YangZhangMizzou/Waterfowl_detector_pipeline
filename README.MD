@@ -113,10 +113,10 @@ python multi_inference_classification.py
 The inference may take a long time. Please be patient.
 
 ## Run the Scripts:
-Once you have the input file ready and in correct virtual env, you can use the file **inference_image_list.py** to start inference the images:
+Once you have the input file ready and in correct virtual env, you can use the file **inference_image_height.py** to start inference the images:
 quick example(full command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --image_ext jpg \
@@ -130,7 +130,7 @@ python inference_image_list.py \
 ```
 quick example(easy command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --out_dir ./result/retinanet/Bird_A
