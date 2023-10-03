@@ -399,8 +399,8 @@ def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_d
     #faster
     from detectron2.engine import DefaultPredictor
     from detectron2.config import get_cfg
+  
     record_list = []
-
     model_15_dir = os.path.join(model_root,'Bird_GIJ_15m','model_final.pth')
     model_30_dir = os.path.join(model_root,'Bird_GIJ_30m','model_final.pth')
     model_60_dir = os.path.join(model_root,'Bird_GIJ_60m','model_final.pth')
