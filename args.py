@@ -8,7 +8,7 @@ def get_args():
     #                     help =' the type of the model,default type used is Bird_D',
     #                     default='Bird_D')
     parser.add_argument('--det_model', type = str,
-                        help ='you can select from yolo,faster, retinanetknn and retinanet',
+                        help ='you can select from yolo,faster, retinanetknn, retinanet and yolonas',
                         default='retinanet')
     parser.add_argument('--det_conf', type = float, default=0.1,
                         help ='Confidence threshold of your detection model')
