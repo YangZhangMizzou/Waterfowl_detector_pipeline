@@ -17,7 +17,7 @@ from mAP_cal import mAp_calculate,plot_f1_score,plot_mAp
 import shutil
 from compare_and_draw import compare_draw
 
-#re18
+#re18 and mixmatch
 from classification_infernece_res18 import res18_classifier_inference
 from classifiers.MixMatch.mixmatch_classification import mixmatch_classifier_inference
 from resnet_pytorch import ResNet
@@ -25,21 +25,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 import torchvision.datasets as datasets
-
-#retinanet
-from retinanet import RetinaNet
-from encoder import DataEncoder
-
-#retinanetknn
-from retinanet_inference_ver3 import Retinanet_instance
-
-#yolo
-from models.common import DetectMultiBackend
-from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
-                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
-
-#yolonas
-import super_gradients
 
 
 warnings.filterwarnings("ignore")
@@ -109,10 +94,14 @@ def prepare_retina_net(model_dir,kwargs):
     return net
 
 def prepare_yolo_net(model_dir):
+    from models.common import DetectMultiBackend
     model = DetectMultiBackend(model_dir, device=device, dnn=False, data=os.path.join('configs','BirdA_all.yaml'), fp16=False)
     return model
 
 def get_detectron_predictor(model_dir):
+    #faster
+    from detectron2.config import get_cfg
+    from detectron2.engine import DefaultPredictor
     cfg = get_cfg()
     cfg.merge_from_file(os.path.join('configs','COCO-Detection','faster_rcnn_R_50_FPN_1x.yaml'))
     cfg.MODEL.DEVICE = device_name
@@ -124,6 +113,9 @@ def get_detectron_predictor(model_dir):
     return predictor
 
 def prepare_yolonas(model_dir):
+    #yolonas
+    import super_gradients
+
     if device_name == 'cuda':
         return super_gradients.training.models.get('yolo_nas_m',num_classes=1,checkpoint_path=model_dir).cuda()
         # return super_gradients.training.models.get("yolo_nas_m", pretrained_weights="coco").cuda()
@@ -132,6 +124,8 @@ def prepare_yolonas(model_dir):
 
 
 def inference_mega_image_yolonas(image_list,model_root, image_out_dir,text_out_dir, visualize, altitude_dict,device,scaleByAltitude, defaultAltitude=[],**kwargs):
+
+    
 
     record_list = []
     model_15 = os.path.join(model_root,'ckpt_best15m.pth')
@@ -198,6 +192,8 @@ def inference_mega_image_yolonas(image_list,model_root, image_out_dir,text_out_d
     return record_list
 
 def inference_mega_image_Retinanet_KNN(image_list, model_root, image_out_dir,text_out_dir, visualize, altitude_dict,device,scaleByAltitude, defaultAltitude=[],**kwargs):
+    #retinanetknn
+    from retinanet_inference_ver3 import Retinanet_instance
     model_type = 'Bird_drone_KNN'
     if (model_type=='Bird_drone_KNN'):
         load_w_config = True
@@ -246,6 +242,10 @@ def inference_mega_image_Retinanet_KNN(image_list, model_root, image_out_dir,tex
     return record_list
 
 def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_out_dir, visualize,altitude_dict, scaleByAltitude,  defaultAltitude=[],**kwargs):
+    #retinanet
+    from retinanet import RetinaNet
+    from encoder import DataEncoder
+
     conf_thresh = get_model_conf_threshold()
     model_30 = os.path.join(model_root,'final_model_alt_30.pkl')
     model_60 = os.path.join(model_root,'final_model_alt_60.pkl')
@@ -319,6 +319,10 @@ def inference_mega_image_Retinanet(image_list, model_root, image_out_dir,text_ou
     return record_list
 
 def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False,  defaultAltitude=[],**kwargs):
+    #yolo
+    from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
+                               increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+
     record_list = []
 
     model_15_dir = os.path.join(model_root,'15.pt')
@@ -344,7 +348,7 @@ def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir
             mega_imgae_id += 1
             mega_image  = cv2.imread(image_dir)
             image_name = os.path.split(image_dir)[-1]
-            image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
+            image_taken_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
             ratio = 1.0
             model = model_list[model_index]
 
@@ -396,9 +400,8 @@ def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir
 
 def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False, defaultAltitude=[],**kwargs):
   
-    #faster
-    from detectron2.engine import DefaultPredictor
-    from detectron2.config import get_cfg
+    
+    
   
     record_list = []
     model_15_dir = os.path.join(model_root,'Bird_GIJ_15m','model_final.pth')
@@ -430,7 +433,7 @@ def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_d
             sub_image_list,coor_list = get_sub_image(mega_image,overlap = 0.2,ratio = 1)
 
             image_name = os.path.split(image_dir)[-1]
-            image_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
+            image_taken_height,model_index,model_height = get_image_height_model_4(image_name.split('.')[0],altitude_dict)
             ratio = 1.0
             predictor = model_list[model_index]
 

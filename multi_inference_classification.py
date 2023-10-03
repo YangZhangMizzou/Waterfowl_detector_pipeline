@@ -6,7 +6,7 @@ today = date.today()
 dataset = 'Bird_I_Waterfowl_SpeciesClassification'
 dataset_root = '/home/yangzhang/waterfowl_datasets'#change it to your dataset.
 
-det_models = ['yolonas']
+det_models = ['yolo','faster']
 cla_models = ['mixmatch']
 all_folders_dataset = glob.glob(os.path.join(dataset_root,dataset,'test'))
 csv_root = os.path.join(dataset_root,dataset,'image_info.csv')
