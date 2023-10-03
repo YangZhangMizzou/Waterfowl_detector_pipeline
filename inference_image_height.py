@@ -38,9 +38,6 @@ from models.common import DetectMultiBackend
 from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
                            increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
 
-#faster
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
 
 #yolonas
 import super_gradients
@@ -399,7 +396,10 @@ def inference_mega_image_YOLO(image_list, model_root, image_out_dir,text_out_dir
     return record_list
 
 def inference_mega_image_faster(image_list, model_root, image_out_dir,text_out_dir, visualize , altitude_dict, scaleByAltitude=False, defaultAltitude=[],**kwargs):
-    
+  
+    #faster
+    from detectron2.engine import DefaultPredictor
+    from detectron2.config import get_cfg
     record_list = []
 
     model_15_dir = os.path.join(model_root,'Bird_GIJ_15m','model_final.pth')
