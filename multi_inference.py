@@ -5,7 +5,7 @@ model_list = ['yolo','faster','retinanet']
 dataset = 'drone_collection_habitat'
 # dataset = 'drone_collection_height'
 # dataset = 'drone_collection_dataset'
-all_folders_dataset = glob.glob(os.path.join('example_images',dataset,'test','*'))
+all_folders_dataset = glob.glob(os.path.join('example_images',dataset,'test','ice'))
 csv_root = os.path.join('example_images',dataset,'image_info.csv')
 
 for det_model in model_list:
