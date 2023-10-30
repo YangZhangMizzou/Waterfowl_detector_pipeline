@@ -49,10 +49,10 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 ])
-device_name = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = torch.device(device_name)
-# device = torch.device('cpu')
-# device_name = 'cpu'
+# device_name = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = torch.device(device_name)
+device = torch.device('cpu')
+device_name = 'cpu'
 
 
 def get_model_conf_threshold ():
@@ -87,7 +87,7 @@ def get_image_height_model_4(image_name,altitude_dict):
         return image_height,3,90
 
 def prepare_retina_net(model_dir,kwargs):
-    if (kwargs['device']!=torch.device('cuda')):
+    if (True):
         print ('loading CPU mode')
         device = torch.device('cpu')
         net = torch.load(model_dir,map_location=device)
