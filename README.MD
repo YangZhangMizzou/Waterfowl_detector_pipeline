@@ -63,7 +63,7 @@ pip install -r requirements.txt
 
 ```
 pip install opencv-contrib-python
-pip install Pillow==6.1
+pip install Pillow==9.5
 pip install pyexiv2
 pip install matplotlib
 pip install -i https://test.pypi.org/simple/ WaterFowlTools
