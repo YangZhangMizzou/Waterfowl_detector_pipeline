@@ -87,7 +87,7 @@ def get_image_height_model_4(image_name,altitude_dict):
         return image_height,3,90
 
 def prepare_retina_net(model_dir,kwargs):
-    if (!torch.cuda.is_available()):
+    if (torch.cuda.is_available()==False):
         print ('loading CPU mode')
         device = torch.device('cpu')
         net = torch.load(model_dir,map_location=device)
