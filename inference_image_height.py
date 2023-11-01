@@ -49,10 +49,10 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 ])
-# device_name = 'cuda' if torch.cuda.is_available() else 'cpu'
-# device = torch.device(device_name)
-device = torch.device('cpu')
-device_name = 'cpu'
+device_name = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device(device_name)
+# device = torch.device('cpu')
+# device_name = 'cpu'
 
 
 def get_model_conf_threshold ():
