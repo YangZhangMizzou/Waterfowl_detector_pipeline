@@ -500,7 +500,7 @@ if __name__ == '__main__':
     altitude_dict = read_csv_info(args.csv_root)
 
     if(args.det_model == 'retinanet'):
-        model_dir = os.path.join('checkpoint','retinanet','general')
+        model_dir = os.path.join('checkpoint','retinanet','retinanet')
         if args.model_dir != '':
             model_dir = args.model_dir
         record = inference_mega_image_Retinanet(
