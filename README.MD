@@ -101,7 +101,7 @@ The inference may take a long time. Please be patient.
 Once you have the input file ready and in correct virtual env, you can use the file **inference_image_list.py** to start inference the images:
 quick example(full command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --image_ext jpg \
@@ -111,23 +111,15 @@ python inference_image_list.py \
 --image_location University_of_Missouri \
 --out_dir ./result/retinanet/Bird_A \
 --evaluate False \
---visualize true 
 ```
 quick example(easy command):
 ```
-python inference_image_list.py \
+python inference_image_height.py \
 --det_model retinanet \
 --image_root ./example_images/Bird_A \
 --out_dir ./result/retinanet/Bird_A
 ```
 
-run yolo only:
-```
-python inference_image_yolo.py\
- --det_model yolo\
- --image_root ./example_images/drone_collection\
- --out_dir ./Result/yolo/drone_collection\
-```
 
 The description of each command are as follows:
 ```
